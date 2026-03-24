@@ -10,12 +10,13 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import router as api_v1_router
+from app.routes import router as api_router
 from app.core.logging import setup_logging
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.core.middleware import ProcessTimeAndRequestIDMiddleware
+from app.core.middleware import ProcessTimeAndRequestIDMiddleware, RateLimitMiddleware
 from app.core.exceptions import HealthPAException
+from app.core.cache import cache_service
 
 # Setup logging
 setup_logging()
@@ -35,11 +36,14 @@ async def lifespan(app: FastAPI):
         logger.warning("Running in DEBUG mode. Creating tables automatically.")
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+    
+    await cache_service.connect()
             
     yield
     
     # Shutdown
     logger.info("Shutting down application...")
+    await cache_service.disconnect()
     await engine.dispose()
 
 
@@ -71,6 +75,9 @@ async def health_pa_exception_handler(request: Request, exc: HealthPAException):
 
 # --- Middleware ---
 
+# Rate Limiting Middleware (before other middleware)
+app.add_middleware(RateLimitMiddleware)
+
 # Performance & Tracing Middleware
 app.add_middleware(ProcessTimeAndRequestIDMiddleware)
 
@@ -86,8 +93,8 @@ app.add_middleware(
 
 # --- API Routers ---
 
-# Version 1 Router
-app.include_router(api_v1_router, prefix="/api/v1")
+# API v1 - All endpoints
+app.include_router(api_router, prefix="/api")
 
 
 @app.get("/health", tags=["Infrastructure"])

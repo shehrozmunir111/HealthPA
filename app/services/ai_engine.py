@@ -1,6 +1,6 @@
 """
 AI Engine Service for clinical code extraction
-Professional version using OpenRouter API (OpenAI-Compatible)
+Using Groq API (Llama 3.1)
 """
 
 import json
@@ -18,18 +18,16 @@ logger = logging.getLogger("healthpa.ai")
 
 class ClinicalCodeExtractor:
     """
-    Extracts ICD-10 and CPT codes from clinical notes using OpenRouter.
-    Standardized to work with any model (Claude, GPT, Llama).
+    Extracts ICD-10 and CPT codes from clinical notes using Groq API.
+    Uses Llama 3.1 for fast inference.
     """
     
     def __init__(self):
-        # OpenRouter uses OpenAI SDK with a custom base URL
         self.client = AsyncOpenAI(
-            api_key=settings.OPENROUTER_API_KEY,
-            base_url="https://openrouter.ai/api/v1",
+            api_key=settings.GROQ_API_KEY,
+            base_url="https://api.groq.com/openai/v1",
         )
-        # Professional Default Model (Can be swapped to any OpenRouter model)
-        self.model = "anthropic/claude-3-sonnet:beta"
+        self.model = "llama-3.1-8b-instant"
     
     async def extract_codes(self, clinical_notes: str) -> Dict:
         """
@@ -41,8 +39,8 @@ class ClinicalCodeExtractor:
         Returns:
             Dict with extracted codes and confidence score.
         """
-        if not settings.OPENROUTER_API_KEY:
-            integration_logger.error("OpenRouter API key missing in configuration.")
+        if not settings.GROQ_API_KEY:
+            integration_logger.error("Groq API key missing in configuration.")
             return {
                 "icd10_codes": [],
                 "cpt_codes": [],
@@ -80,12 +78,8 @@ class ClinicalCodeExtractor:
                     {"role": "system", "content": "You are a professional medical coder."},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={ "type": "json_object" }, # Enforce JSON mode
-                temperature=0,
-                extra_headers={
-                    "HTTP-Referer": "https://healthpa.ai", # Required by OpenRouter
-                    "X-Title": "HealthPA Clinical Engine"
-                }
+                response_format={ "type": "json_object" },
+                temperature=0
             )
             
             content = response.choices[0].message.content
@@ -111,7 +105,7 @@ class ClinicalCodeExtractor:
         """
         Analyze a PA request for completeness using AI.
         """
-        if not settings.OPENROUTER_API_KEY:
+        if not settings.GROQ_API_KEY:
             return {"error": "AI provider not configured"}
         
         prompt = f"Analyze this PA Request for clinical necessity:\n{json.dumps(pa_data)}"
@@ -119,11 +113,7 @@ class ClinicalCodeExtractor:
         try:
             response = await self.client.chat.completions.create(
                 model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                extra_headers={
-                    "HTTP-Referer": "https://healthpa.ai",
-                    "X-Title": "HealthPA Clinical Engine"
-                }
+                messages=[{"role": "user", "content": prompt}]
             )
             return {"analysis": response.choices[0].message.content, "success": True}
         except Exception as e:

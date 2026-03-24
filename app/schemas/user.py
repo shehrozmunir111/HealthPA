@@ -23,6 +23,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Schema for creating a user."""
     password: str = Field(..., min_length=8, max_length=100)
+    hospital_id: UUID
 
 
 class UserUpdate(BaseModel):

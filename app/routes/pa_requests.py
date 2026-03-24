@@ -3,15 +3,20 @@ Prior Authorization (PA) Request Endpoints
 Professional refactored version.
 """
 
+from datetime import datetime, timezone
+from typing import List, Optional
+from uuid import UUID, uuid4
+
 from fastapi import APIRouter, status, Query, UploadFile, File
 from sqlalchemy import select
 
-from app.core._logging import logger
+from app.core.logging import logger
 from app.core.dependencies import CurrentUser, HospitalCtx, DbSession, Pagination
 from app.core.exceptions import NotFoundException, BadRequestException
-from app.models.pa_request import PARequest, PARequestStatus
+from app.models.pa_request import PARequest, PARequestStatus, FSMTransitionError, FSMValidator
 from app.models.patient import Patient
 from app.services.ocr_service import save_upload_file, process_ocr
+from app.services.webhook_service import webhook_service
 from app.schemas.pa_request import (
     PARequestCreate, 
     PARequestResponse, 
@@ -59,7 +64,7 @@ async def upload_clinical_document(
         "filename": file.filename,
         "path": file_path,
         "status": "processing",
-        "uploaded_at": datetime.utcnow().isoformat(),
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
         "ocr_result": None
     }
     
@@ -139,6 +144,13 @@ async def create_pa_request(
     await db.flush()
     await db.refresh(pa_request)
     
+    webhook_service.notify_pa_created(
+        pa_request_id=pa_request.id,
+        hospital_id=hospital_ctx.hospital_id,
+        request_number=pa_request.request_number,
+        patient_id=pa_request.patient_id
+    )
+    
     return pa_request
 
 
@@ -175,6 +187,9 @@ async def update_pa_status(
 ):
     """
     Advance clinical workflow status via FSM transition.
+    
+    Validates state transitions according to FSM rules.
+    Returns error with allowed transitions if invalid.
     """
     logger.info(f"User {user.email} transitioning PA {pa_request_id} to {status_update.status}")
     
@@ -189,16 +204,30 @@ async def update_pa_status(
     hospital_ctx.verify_ownership(pa_request)
     
     try:
-        # Perform FSM transition
         pa_request.transition_to(
             new_status=status_update.status,
             user_id=str(user.id),
             notes=status_update.notes
+        )
+    except FSMTransitionError as e:
+        allowed = FSMValidator.get_allowed_transitions(pa_request.status)
+        allowed_str = [s.value for s in allowed] if allowed else []
+        raise BadRequestException(
+            f"{str(e)} Allowed transitions from current status: {allowed_str}"
         )
     except ValueError as e:
         raise BadRequestException(str(e))
     
     await db.flush()
     await db.refresh(pa_request)
+    
+    webhook_service.notify_status_changed(
+        pa_request_id=pa_request.id,
+        hospital_id=hospital_ctx.hospital_id,
+        status=pa_request.status,
+        request_number=pa_request.request_number,
+        patient_id=pa_request.patient_id,
+        decision_notes=status_update.notes
+    )
     
     return pa_request

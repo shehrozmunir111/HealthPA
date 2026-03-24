@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     # AI/OpenRouter
     OPENROUTER_API_KEY: str = ""
     
+    # AI/Groq
+    GROQ_API_KEY: str = ""
+    
+    # Webhooks
+    WEBHOOK_URLS: str = ""
+    
     @property
     def sync_database_url(self) -> str:
         """Get synchronous database URL for Alembic."""

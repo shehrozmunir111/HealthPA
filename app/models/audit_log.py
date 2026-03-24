@@ -5,10 +5,10 @@ HIPAA-compliant audit trail with JSONB and GIN indexing.
 
 from uuid import uuid4
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List
 from enum import Enum as PyEnum
 
-from sqlalchemy import String, DateTime, ForeignKey, Text, Enum
+from sqlalchemy import String, DateTime, ForeignKey, Text, Enum, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,6 +16,9 @@ from app.core.database import Base
 
 if TYPE_CHECKING:
     from app.models.hospital import Hospital
+
+JSONType = JSON().with_variant(JSONB(), "postgresql")
+ArrayType = ARRAY(String).with_variant(JSON, "sqlite")
 
 
 class AuditAction(str, PyEnum):
@@ -78,14 +81,14 @@ class AuditLog(Base):
     
     # Detailed context (flexible JSONB)
     details: Mapped[Optional[dict]] = mapped_column(
-        JSONB,
+        JSONType,
         nullable=True,
         comment="Flexible metadata: changed_fields, ip_address, user_agent, etc."
     )
     
     # For searching/filtering
-    tags: Mapped[Optional[list]] = mapped_column(
-        ARRAY(String),
+    tags: Mapped[Optional[List[str]]] = mapped_column(
+        ArrayType,
         nullable=True,
         comment="Tags for categorizing audit events"
     )

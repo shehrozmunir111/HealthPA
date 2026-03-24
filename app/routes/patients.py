@@ -9,9 +9,10 @@ from uuid import UUID
 from fastapi import APIRouter, status
 from sqlalchemy import select
 
-from app.core._logging import logger
+from app.core.logging import logger
 from app.core.dependencies import CurrentUser, HospitalCtx, DbSession, Pagination
 from app.core.exceptions import PatientNotFoundException
+from app.core.cache import cache_service, CacheKeys
 from app.models.patient import Patient
 from app.models.audit_log import AuditAction
 from app.schemas.patient import PatientCreate, PatientResponse, PatientUpdate
@@ -32,8 +33,15 @@ async def list_patients(
     
     ISOLATION: Strict hospital filtering enforced by HospitalCtx.
     AUDIT: Records the bulk access event.
+    CACHING: Patient lists are cached for 5 minutes.
     """
     logger.debug(f"User {user.email} listing patients for hospital {hospital_ctx.hospital_id}")
+    
+    cache_key = f"{CacheKeys.hospital_patients(str(hospital_ctx.hospital_id))}:page:{page.skip}:{page.limit}"
+    
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        return cached_data
     
     query = hospital_ctx.apply_isolation(
         select(Patient).offset(page.skip).limit(page.limit),
@@ -43,7 +51,6 @@ async def list_patients(
     result = await db.execute(query)
     patients = result.scalars().all()
     
-    # HIPAA Audit log for access
     await AuditService.log_action(
         db=db,
         hospital_id=hospital_ctx.hospital_id,
@@ -53,6 +60,9 @@ async def list_patients(
         resource_type="patient_list",
         description=f"Listed {len(patients)} patients"
     )
+    
+    patients_data = [PatientResponse.model_validate(p).model_dump() for p in patients]
+    await cache_service.set(cache_key, patients_data, ttl_seconds=300)
     
     return patients
 
@@ -167,5 +177,7 @@ async def delete_patient(
     
     await db.delete(patient)
     await db.flush()
+    
+    await cache_service.invalidate_patient_cache(str(patient_id))
     
     return None

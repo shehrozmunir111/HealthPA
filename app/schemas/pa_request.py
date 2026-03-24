@@ -2,17 +2,18 @@
 PA Request Pydantic Schemas
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional, List
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 from app.models.pa_request import PARequestStatus
+from app.core.sanitization import InputSanitizer
 
 
 class PARequestBase(BaseModel):
-    """Base PA Request schema."""
+    """Base PA Request schema with input sanitization."""
     request_number: str = Field(..., min_length=1, max_length=50)
     diagnosis_codes: List[str] = Field(default_factory=list)
     procedure_codes: List[str] = Field(default_factory=list)
@@ -20,6 +21,23 @@ class PARequestBase(BaseModel):
     payer_name: str = Field(..., min_length=1, max_length=200)
     payer_id: Optional[str] = Field(None, max_length=100)
     is_urgent: bool = False
+    requested_date: date = Field(default_factory=date.today)
+    
+    @field_validator('request_number', 'payer_name', 'payer_id')
+    @classmethod
+    def sanitize_strings(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize string inputs."""
+        if v is None:
+            return v
+        return InputSanitizer.sanitize_string(v)
+    
+    @field_validator('clinical_notes')
+    @classmethod
+    def sanitize_clinical_notes(cls, v: Optional[str]) -> Optional[str]:
+        """Sanitize clinical notes specifically for medical content."""
+        if v is None:
+            return v
+        return InputSanitizer.sanitize_clinical_notes(v)
 
 
 class PARequestCreate(PARequestBase):
@@ -61,3 +79,4 @@ class PARequestResponse(PARequestBase):
     updated_at: datetime
     submitted_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    attachments: List[dict] = Field(default_factory=list)

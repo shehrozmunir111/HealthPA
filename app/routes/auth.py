@@ -10,14 +10,12 @@ from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 
-from app.core._logging import security_logger
+from app.core.logging import security_logger
 from app.core.config import settings
 from app.core.dependencies import DbSession
 from app.core.exceptions import UnauthorizedException, ConflictException, BadRequestException
-from app.core.security import (
-    create_access_token,
-    verify_password,
-)
+from app.core.security import create_access_token
+from app.core.password import verify_password
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse
 

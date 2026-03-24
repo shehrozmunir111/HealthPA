@@ -7,11 +7,13 @@ from uuid import uuid4
 from datetime import datetime, date
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import String, DateTime, Date, ForeignKey, Text
+from sqlalchemy import String, DateTime, Date, ForeignKey, Text, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+JSONType = JSON().with_variant(JSONB(), "postgresql")
 
 if TYPE_CHECKING:
     from app.models.hospital import Hospital
@@ -57,7 +59,7 @@ class Patient(Base):
     insurance_group_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     
     # Additional metadata (flexible JSON storage)
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    extra_data: Mapped[Optional[dict]] = mapped_column(JSONType, nullable=True)
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(

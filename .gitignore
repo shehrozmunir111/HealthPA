@@ -22,31 +22,44 @@ wheels/
 *.egg
 
 # Virtual Environment
-.env/
 .venv/
 venv/
 ENV/
 
-# Configuration
+# Environment Variables
 .env
-!.env.example
+.env.local
+.env.*.local
 
 # Logs
-logs/
 *.log
 
-# Data & Privacy (HIPAA Compliance - Never commit real clinical data)
+# Data & Privacy (HIPAA Compliance)
 data/
 db_data/
 **/ocr_uploads/*
+!data/.gitkeep
 
 # Testing
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Editor/OS
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Documentation (generated)
+*.docx
+
+# Scripts (not for production)
+generate_docs.py
+reset_db.py
+seed_data.py
+commit_message.txt

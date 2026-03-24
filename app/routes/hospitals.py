@@ -9,7 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, status
 from sqlalchemy import select
 
-from app.core._logging import logger
+from app.core.logging import logger
 from app.core.dependencies import CurrentUser, DbSession, Pagination
 from app.core.exceptions import NotFoundException, ConflictException
 from app.models.hospital import Hospital
