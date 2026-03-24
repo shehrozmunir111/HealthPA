@@ -1,0 +1,80 @@
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthpa-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/healthpa
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - DEBUG=${DEBUG:-True}
+    volumes:
+      - ./data/ocr_uploads:/app/data/ocr_uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - healthpa-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: healthpa-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=healthpa
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - healthpa-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: healthpa-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - healthpa-network
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthpa-celery
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/healthpa
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+    depends_on:
+      - db
+      - redis
+    command: celery -A app.core.celery_app worker --loglevel=info
+    volumes:
+      - ./data/ocr_uploads:/app/data/ocr_uploads
+    networks:
+      - healthpa-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  healthpa-network:
+    driver: bridge

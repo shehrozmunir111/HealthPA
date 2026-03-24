@@ -1,0 +1,59 @@
+"""
+Core Configuration & Settings
+$0 Infra Focus - Environment-based configuration
+"""
+
+from functools import lru_cache
+from typing import List
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Application settings with environment variable support."""
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
+    # Project
+    PROJECT_NAME: str = "HealthPA"
+    VERSION: str = "0.1.0"
+    DEBUG: bool = True
+    
+    # Security
+    SECRET_KEY: str = "change-this-in-production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # Database
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/healthpa"
+    
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379/0"
+    
+    # CORS
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    
+    # File Storage
+    OCR_UPLOAD_DIR: str = "data/ocr_uploads"
+    MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
+    
+    # AI/OpenRouter
+    OPENROUTER_API_KEY: str = ""
+    
+    @property
+    def sync_database_url(self) -> str:
+        """Get synchronous database URL for Alembic."""
+        return self.DATABASE_URL.replace("+asyncpg", "")
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    """Cached settings instance."""
+    return Settings()
+
+
+settings = get_settings()
