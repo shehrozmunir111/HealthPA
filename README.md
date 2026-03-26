@@ -1,79 +1,65 @@
-# HealthPA - AI-Powered Prior Authorization System
+# HealthPA
 
-**HealthPA** is a multi-tenant clinical workflow engine designed to automate the **Prior Authorization (PA)** process for healthcare facilities. It uses AI for clinical code extraction, OCR for document processing, and Finite State Machines for workflow management.
+HealthPA is a FastAPI-based prior authorization platform for healthcare workflows. It provides hospital-scoped tenant isolation, structured PA request management, document upload/OCR hooks, analytics endpoints, background processing support, and a PostgreSQL-backed test setup.
 
----
+## Highlights
 
-## Key Features
-
-- **Multi-Tenancy Isolation**: Strict `hospital_id` based data separation for HIPAA compliance
-- **AI Extraction Engine**: Clinical code (ICD-10/CPT) extraction using Groq API (Llama 3.1)
-- **PDF & Image OCR**: Async document processing with pdf2image and Tesseract
-- **Webhook Notifications**: Real-time status change notifications to external systems
-- **FSM Workflow**: Advanced PA status transitions (Draft → Pending → Approved/Denied)
-- **Rate Limiting**: Built-in abuse prevention
-- **Redis Caching**: Smart caching for frequently accessed data
-- **Batch Processing**: CSV bulk import for PA requests and patients
-- **Analytics Dashboard**: Reporting endpoints for PA metrics and trends
-- **Audit Trail**: HIPAA-ready event logging
-- **Comprehensive Testing**: 48 unit tests covering all endpoints
-
----
+- Multi-tenant data isolation using `hospital_id`
+- JWT authentication with tenant-aware validation
+- Prior authorization workflow with finite-state transition rules
+- OCR upload pipeline with lazy dependency loading
+- Batch CSV import for patients and PA requests
+- Analytics endpoints for PA activity and processing trends
+- Redis caching and Celery worker support
+- PostgreSQL-backed development and test workflows
+- Automated test suite with 50 passing tests
 
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| Backend | FastAPI (Python 3.11+) |
-| Database | PostgreSQL (SQLAlchemy 2.0 Async) |
-| Caching | Redis |
+| API | FastAPI |
+| Language | Python 3.11+ |
+| Database | PostgreSQL |
+| ORM | SQLAlchemy 2.0 Async |
+| Cache | Redis |
 | Task Queue | Celery |
-| AI Engine | Groq API (Llama 3.1) |
-| OCR | Tesseract + pdf2image |
-| Infrastructure | Docker & Docker Compose |
-
----
+| OCR | Tesseract, pdf2image |
+| AI Client | OpenAI-compatible client for Groq |
+| Containers | Docker, Docker Compose |
+| Testing | Pytest, pytest-asyncio, httpx |
 
 ## Project Structure
 
-```
+```text
 HealthPA/
-├── app/
-│   ├── core/          # config, database, security, middleware, cache, sanitization
-│   ├── models/        # SQLAlchemy models (Hospital, User, Patient, PARequest, AuditLog)
-│   ├── schemas/       # Pydantic schemas for validation
-│   ├── services/      # ai_engine, ocr_service, webhook_service, audit_service
-│   ├── routes/        # API endpoints (auth, hospitals, patients, pa_requests, batch, analytics)
-│   └── main.py        # FastAPI application entry point
-├── tests/             # Pytest test suite (48 tests)
-├── alembic/           # Database migrations
-├── assets/            # Screenshots and images
-├── data/              # Local file storage (gitignored)
-├── .env               # Environment variables (gitignored)
-├── requirements.txt    # Python dependencies
-├── docker-compose.yml  # Docker orchestration
-├── Dockerfile         # Container configuration
-└── README.md
+|-- app/
+|   |-- core/         # config, database, security, middleware, cache
+|   |-- models/       # SQLAlchemy domain models
+|   |-- routes/       # FastAPI route modules
+|   |-- schemas/      # Pydantic request/response schemas
+|   |-- services/     # OCR, webhooks, audit, AI integrations
+|   `-- main.py       # FastAPI application entry point
+|-- tests/            # PostgreSQL-backed test suite
+|-- alembic/          # Migration scaffolding
+|-- assets/           # Project screenshots and assets
+|-- data/             # Local OCR/upload storage
+|-- manage_db.py      # Unified database management CLI
+|-- init_db.py        # Backward-compatible init wrapper
+|-- seed_data.py      # Backward-compatible seed wrapper
+|-- reset_db.py       # Backward-compatible reset wrapper
+`-- README.md
 ```
 
----
+## Configuration
 
-## Quick Start
+Create a `.env` file in the project root:
 
-### Prerequisites
-- Docker & Docker Compose
-- PostgreSQL
-- Redis
-- Python 3.11+ (for local development)
-- Tesseract-OCR (for OCR functionality)
-
-### Configuration
-
-Create a `.env` file:
 ```bash
 # Database
 DATABASE_URL=postgresql+asyncpg://postgres:admin@localhost:5432/healthPA
 TEST_DATABASE_URL=postgresql+asyncpg://postgres:admin@localhost:5432/healthPA_test
+TEST_DATABASE_SCHEMA=healthpa_test
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
@@ -82,117 +68,109 @@ REDIS_URL=redis://localhost:6379/0
 SECRET_KEY=your-secret-key-here
 DEBUG=True
 
-# AI (Groq)
+# AI
 GROQ_API_KEY=your-groq-api-key
 
-# Webhooks (comma-separated URLs)
+# Webhooks
 WEBHOOK_URLS=https://example.com/webhook
 ```
 
-### Running with Docker
+## Local Development
+
+### Prerequisites
+
+- Python 3.11+
+- PostgreSQL
+- Redis
+- Tesseract OCR for document processing
+
+### Install Dependencies
 
 ```bash
-# Start all services (API, DB, Redis, Celery)
-docker-compose up --build
-
-# API available at http://localhost:8000
-# Swagger docs at http://localhost:8000/docs
+pip install -r requirements.txt
 ```
 
-### Running Locally
+### Database Commands
+
+Primary workflow:
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Unified database CLI
 python manage_db.py init
 python manage_db.py seed
 python manage_db.py reset
 python manage_db.py reset --seed
 python manage_db.py drop
+```
 
-# Backward-compatible shortcuts still work
+Backward-compatible wrappers still work:
+
+```bash
 python init_db.py
 python seed_data.py
 python reset_db.py --seed
+```
 
-# Start API server
+### Run the API
+
+```bash
 uvicorn app.main:app --reload
+```
 
-# Start Celery worker (separate terminal)
+### Run the Celery Worker
+
+```bash
 celery -A app.core.celery_app worker --loglevel=info
 ```
 
----
+## Docker
 
-## API Endpoints
+```bash
+docker-compose up --build
+```
 
-**23 endpoints** covering Authentication, Hospitals, Patients, PA Workflow, Batch Operations, and Analytics.
+Available services:
 
-### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/login` | User login |
-| POST | `/api/auth/register` | User registration |
+- API: `http://localhost:8000`
+- Swagger UI: `http://localhost:8000/docs`
 
-### Hospitals
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/hospitals/` | List hospitals |
-| POST | `/api/hospitals/` | Create hospital |
-| GET | `/api/hospitals/{id}` | Get hospital |
-| PATCH | `/api/hospitals/{id}` | Update hospital |
+## API Surface
 
-### Patients
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/patients/` | List patients |
-| POST | `/api/patients/` | Create patient |
-| GET | `/api/patients/{id}` | Get patient |
-| PATCH | `/api/patients/{id}` | Update patient |
-| DELETE | `/api/patients/{id}` | Delete patient |
+HealthPA exposes endpoints across these areas:
 
-### PA Workflow
-| Method | Endpoint | Description |
-|--------|----------|-------------|
+- Authentication
+- Hospitals
+- Patients
+- PA requests
+- Batch operations
+- Analytics
+- Infrastructure health checks
+
+### Key Routes
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/auth/login` | Authenticate a user |
+| POST | `/api/auth/register` | Register a user |
+| GET | `/api/patients/` | List patients for the current tenant |
+| POST | `/api/patients/` | Create a patient |
 | GET | `/api/pa-requests/` | List PA requests |
-| POST | `/api/pa-requests/` | Create PA request |
-| GET | `/api/pa-requests/{id}` | Get PA request |
-| PATCH | `/api/pa-requests/{id}/status` | Update PA status |
-| POST | `/api/pa-requests/{id}/upload` | Upload document |
-
-### Batch Operations
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/batch/pa-requests/csv` | Bulk import PA requests |
-| POST | `/api/batch/patients/csv` | Bulk import patients |
-
-### Analytics
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/analytics/pa-summary` | PA statistics |
-| GET | `/api/analytics/processing-time` | Processing time metrics |
-| GET | `/api/analytics/payer-breakdown` | Payer statistics |
-| GET | `/api/analytics/trends` | Daily trends |
-| GET | `/api/analytics/patient-stats` | Patient statistics |
-
-### Infrastructure
-| Method | Endpoint | Description |
-|--------|----------|-------------|
+| POST | `/api/pa-requests/` | Create a PA request |
+| PATCH | `/api/pa-requests/{id}/status` | Advance PA workflow status |
+| POST | `/api/pa-requests/{id}/upload` | Upload a clinical document |
+| POST | `/api/batch/patients/csv` | Import patients from CSV |
+| POST | `/api/batch/pa-requests/csv` | Import PA requests from CSV |
+| GET | `/api/analytics/pa-summary` | PA summary metrics |
 | GET | `/health` | Health check |
-
----
 
 ## API Documentation Screenshot
 
+A sample Swagger UI view of the available API routes:
+
 ![API Endpoints](assets/endpoints.png)
 
----
+## Test Data
 
-## Test Credentials
-
-After seeding the database:
+After seeding the database, these sample users are available:
 
 | Email | Password | Role |
 |-------|----------|------|
@@ -200,30 +178,28 @@ After seeding the database:
 | `nurse.johnson@mgh.org` | `password123` | Nurse |
 | `admin@mgh.org` | `admin123` | Admin |
 
----
+## Testing
 
-## Security
-
-- **Tenant Isolation**: All data filtered by `hospital_id`
-- **RBAC**: Role-based access control (Doctor, Nurse, Admin, Reviewer)
-- **Rate Limiting**: 100 req/min default, 10 req/min for auth
-- **Input Sanitization**: XSS/injection prevention
-- **FSM Validation**: Invalid state transitions rejected
-
----
-
-## Running Tests
+The automated test suite runs against PostgreSQL.
 
 ```bash
-# Run all tests against PostgreSQL test database
 pytest tests/ -v
-
-# Run with coverage
 pytest tests/ --cov=app --cov-report=html
 ```
 
----
+Current status:
+
+- 50 tests passing
+
+## Security Notes
+
+- Hospital isolation is enforced through authenticated tenant context
+- Hospital management routes are admin-restricted
+- JWT validation includes tenant claim checks
+- Rate limiting is enabled for auth and general API traffic
+- Input sanitization is applied to user-controlled fields
+- PA status changes are validated through explicit FSM rules
 
 ## License
 
-Proprietary - Developed for Professional Clinical Environments.
+Proprietary. Intended for professional clinical workflow environments.
