@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Optional, List
 from tempfile import TemporaryDirectory
 
-import pytesseract
 from PIL import Image
 from celery import shared_task
 
@@ -23,6 +22,18 @@ except ImportError:
 from app.core.config import settings
 
 logger = logging.getLogger("healthpa.ocr")
+
+
+def _get_pytesseract():
+    """Import pytesseract lazily so the app can boot without OCR extras."""
+    try:
+        import pytesseract
+    except ImportError as exc:
+        raise ImportError(
+            "pytesseract is required for OCR processing. Install the OCR dependencies first."
+        ) from exc
+
+    return pytesseract
 
 
 @shared_task(bind=True, max_retries=3)
@@ -75,6 +86,7 @@ def process_ocr(self, file_path: str, file_name: str) -> dict:
 
 def _process_image(image_path: str) -> dict:
     """Process a single image file with OCR."""
+    pytesseract = _get_pytesseract()
     image = Image.open(image_path)
     text = pytesseract.image_to_string(image)
     
@@ -93,6 +105,7 @@ def _process_pdf(pdf_path: str) -> dict:
     """
     Process a PDF file by converting each page to an image and applying OCR.
     """
+    pytesseract = _get_pytesseract()
     if not PDF2IMAGE_AVAILABLE:
         raise ImportError(
             "pdf2image library is required for PDF processing. "

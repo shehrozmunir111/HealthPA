@@ -8,7 +8,7 @@ import io
 import logging
 from typing import List, Optional
 from uuid import uuid4
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -166,7 +166,7 @@ async def _process_csv_row(
         payer_name=payer_name,
         payer_id=row.get('payer_id', '').strip() or None,
         is_urgent=row.get('is_urgent', '').lower() == 'true',
-        requested_date=datetime.utcnow(),
+        requested_date=date.today(),
         status=PARequestStatus.DRAFT,
         status_history=[{
             "status": "draft",
@@ -192,8 +192,8 @@ async def _process_csv_row(
     )
 
 
-def _parse_json_field(value: str) -> List[dict]:
-    """Parse JSON field from CSV (handles simple JSON arrays)."""
+def _parse_json_field(value: str) -> List[str]:
+    """Parse CSV JSON fields into a normalized list of codes."""
     import json
     
     if not value or value.strip() in ('', '[]', '{}'):
@@ -205,8 +205,15 @@ def _parse_json_field(value: str) -> List[dict]:
         try:
             parsed = json.loads(value)
             if isinstance(parsed, list):
-                return parsed
-            return [parsed]
+                normalized: List[str] = []
+                for item in parsed:
+                    if isinstance(item, str):
+                        normalized.append(item)
+                    elif isinstance(item, dict) and item.get("code"):
+                        normalized.append(str(item["code"]))
+                return normalized
+            if isinstance(parsed, dict) and parsed.get("code"):
+                return [str(parsed["code"])]
         except json.JSONDecodeError:
             pass
     

@@ -6,19 +6,21 @@ Professional refactored version.
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 
 from app.core.logging import logger
-from app.core.dependencies import CurrentUser, DbSession, Pagination
+from app.core.dependencies import CurrentUser, DbSession, Pagination, RoleChecker
 from app.core.exceptions import NotFoundException, ConflictException
 from app.models.hospital import Hospital
+from app.models.user import UserRole
 from app.schemas.hospital import HospitalCreate, HospitalResponse, HospitalUpdate
 
 router = APIRouter()
+admin_required = Depends(RoleChecker([UserRole.ADMIN]))
 
 
-@router.get("/", response_model=List[HospitalResponse])
+@router.get("/", response_model=List[HospitalResponse], dependencies=[admin_required])
 async def list_hospitals(
     db: DbSession,
     user: CurrentUser,
@@ -35,7 +37,7 @@ async def list_hospitals(
     return result.scalars().all()
 
 
-@router.post("/", response_model=HospitalResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=HospitalResponse, status_code=status.HTTP_201_CREATED, dependencies=[admin_required])
 async def create_hospital(
     hospital_in: HospitalCreate,
     db: DbSession,
@@ -62,7 +64,7 @@ async def create_hospital(
     return hospital
 
 
-@router.get("/{hospital_id}", response_model=HospitalResponse)
+@router.get("/{hospital_id}", response_model=HospitalResponse, dependencies=[admin_required])
 async def get_hospital(
     hospital_id: UUID,
     db: DbSession,
@@ -80,7 +82,7 @@ async def get_hospital(
     return hospital
 
 
-@router.patch("/{hospital_id}", response_model=HospitalResponse)
+@router.patch("/{hospital_id}", response_model=HospitalResponse, dependencies=[admin_required])
 async def update_hospital(
     hospital_id: UUID,
     hospital_in: HospitalUpdate,

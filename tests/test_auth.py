@@ -5,6 +5,7 @@ Authentication Endpoint Tests
 import pytest
 from httpx import AsyncClient
 
+from app.core.security import get_current_user
 from app.models.user import User, UserRole
 
 
@@ -147,3 +148,22 @@ async def test_register_short_password(client: AsyncClient, test_hospital):
         }
     )
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_rejects_token_with_mismatched_hospital_claim(db_session, test_user: User, test_hospital_2):
+    """Test that JWT hospital claims must match the user's actual tenant."""
+    from app.core.security import create_access_token
+
+    token = create_access_token(
+        data={
+            "sub": str(test_user.id),
+            "hospital_id": str(test_hospital_2.id),
+            "role": test_user.role.value,
+        }
+    )
+
+    with pytest.raises(Exception) as exc_info:
+        await get_current_user(token=token, db=db_session)
+
+    assert getattr(exc_info.value, "status_code", None) == 401

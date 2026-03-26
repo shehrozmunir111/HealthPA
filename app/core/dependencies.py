@@ -15,6 +15,7 @@ from app.core.security import (
     get_hospital_context,
     HospitalContext,
 )
+from app.core.exceptions import ForbiddenException
 from app.models.user import User
 
 # --- Database Dependencies ---
@@ -48,8 +49,10 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     def __call__(self, user: CurrentUser):
+        if user.is_superuser:
+            return user
+
         if user.role not in self.allowed_roles:
-            from app.core.exceptions import ForbiddenException
             raise ForbiddenException(
                 f"Role {user.role} is not authorized. Required: {self.allowed_roles}"
             )

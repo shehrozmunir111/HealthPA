@@ -14,9 +14,9 @@ async def test_list_hospitals_unauthorized(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_list_hospitals_success(auth_client: AsyncClient, test_hospital):
-    """Test listing hospitals with authentication."""
-    response = await auth_client.get("/api/hospitals/")
+async def test_list_hospitals_success(admin_client: AsyncClient, test_hospital):
+    """Test listing hospitals with admin authentication."""
+    response = await admin_client.get("/api/hospitals/")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
@@ -24,9 +24,9 @@ async def test_list_hospitals_success(auth_client: AsyncClient, test_hospital):
 
 
 @pytest.mark.asyncio
-async def test_list_hospitals_pagination(auth_client: AsyncClient, test_hospital):
+async def test_list_hospitals_pagination(admin_client: AsyncClient, test_hospital):
     """Test listing hospitals with pagination."""
-    response = await auth_client.get("/api/hospitals/?skip=0&limit=10")
+    response = await admin_client.get("/api/hospitals/?skip=0&limit=10")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
@@ -81,9 +81,9 @@ async def test_create_hospital_missing_fields(admin_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_get_hospital_success(auth_client: AsyncClient, test_hospital):
+async def test_get_hospital_success(admin_client: AsyncClient, test_hospital):
     """Test getting a specific hospital."""
-    response = await auth_client.get(f"/api/hospitals/{test_hospital.id}")
+    response = await admin_client.get(f"/api/hospitals/{test_hospital.id}")
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == str(test_hospital.id)
@@ -92,11 +92,31 @@ async def test_get_hospital_success(auth_client: AsyncClient, test_hospital):
 
 
 @pytest.mark.asyncio
-async def test_get_hospital_not_found(auth_client: AsyncClient):
+async def test_get_hospital_not_found(admin_client: AsyncClient):
     """Test getting a non-existent hospital."""
     from uuid import uuid4
-    response = await auth_client.get(f"/api/hospitals/{uuid4()}")
+    response = await admin_client.get(f"/api/hospitals/{uuid4()}")
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_hospital_routes_forbid_non_admin(auth_client: AsyncClient, test_hospital):
+    """Test that non-admin users cannot access hospital management endpoints."""
+    response = await auth_client.get("/api/hospitals/")
+    assert response.status_code == 403
+
+    response = await auth_client.get(f"/api/hospitals/{test_hospital.id}")
+    assert response.status_code == 403
+
+    response = await auth_client.post(
+        "/api/hospitals/",
+        json={
+            "name": "Blocked Hospital",
+            "code": "BLOCK001",
+            "address": "403 Road"
+        }
+    )
+    assert response.status_code == 403
 
 
 @pytest.mark.asyncio

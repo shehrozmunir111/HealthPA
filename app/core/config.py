@@ -7,6 +7,7 @@ from functools import lru_cache
 from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 
 class Settings(BaseSettings):
@@ -30,6 +31,8 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/healthpa"
+    TEST_DATABASE_URL: str = ""
+    TEST_DATABASE_SCHEMA: str = "healthpa_test"
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -54,6 +57,13 @@ class Settings(BaseSettings):
     def sync_database_url(self) -> str:
         """Get synchronous database URL for Alembic."""
         return self.DATABASE_URL.replace("+asyncpg", "")
+
+    @property
+    def effective_test_database_url(self) -> str:
+        """Get the PostgreSQL database URL used for tests."""
+        if self.TEST_DATABASE_URL:
+            return self.TEST_DATABASE_URL
+        return make_url(self.DATABASE_URL).render_as_string(hide_password=False)
 
 
 @lru_cache()

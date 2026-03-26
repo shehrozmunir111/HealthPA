@@ -12,15 +12,13 @@ from sqlalchemy import select
 
 from app.core.logging import logger
 from app.core.dependencies import CurrentUser, HospitalCtx, DbSession, Pagination
-from app.core.exceptions import NotFoundException, BadRequestException
+from app.core.exceptions import NotFoundException, BadRequestException, InternalServerException
 from app.models.pa_request import PARequest, PARequestStatus, FSMTransitionError, FSMValidator
 from app.models.patient import Patient
-from app.services.ocr_service import save_upload_file, process_ocr
 from app.services.webhook_service import webhook_service
 from app.schemas.pa_request import (
     PARequestCreate, 
     PARequestResponse, 
-    PARequestUpdate,
     PARequestStatusUpdate
 )
 
@@ -54,6 +52,13 @@ async def upload_clinical_document(
         raise NotFoundException(f"PA Request {pa_request_id} not found.")
     
     hospital_ctx.verify_ownership(pa_request)
+
+    try:
+        from app.services.ocr_service import save_upload_file, process_ocr
+    except ImportError as exc:
+        raise InternalServerException(
+            "OCR dependencies are not installed. Upload processing is unavailable."
+        ) from exc
     
     # 2. Save file to professional storage location
     file_path = save_upload_file(file)

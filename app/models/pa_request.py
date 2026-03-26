@@ -4,11 +4,11 @@ Core business entity with FSM (Finite State Machine) support.
 """
 
 from uuid import uuid4
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING, List, Optional
 from enum import Enum as PyEnum
 
-from sqlalchemy import String, DateTime, ForeignKey, Text, Enum, Numeric, JSON
+from sqlalchemy import String, Date, DateTime, ForeignKey, Text, Enum, Numeric, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -195,7 +195,7 @@ class PARequest(Base):
     
     # Urgency
     is_urgent: Mapped[bool] = mapped_column(default=False, nullable=False)
-    requested_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    requested_date: Mapped[date] = mapped_column(Date, nullable=False)
     
     # OCR/Attachments metadata
     attachments: Mapped[List[dict]] = mapped_column(
@@ -239,7 +239,7 @@ class PARequest(Base):
         transition = {
             "from": self.status.value,
             "to": new_status.value,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "user_id": user_id,
             "notes": notes
         }
@@ -252,11 +252,12 @@ class PARequest(Base):
         self.status = new_status
         
         # Update timestamps based on state
+        now = datetime.now(timezone.utc)
         if new_status == PARequestStatus.PENDING and not self.submitted_at:
-            self.submitted_at = datetime.now()
+            self.submitted_at = now
         elif new_status in [PARequestStatus.APPROVED, PARequestStatus.DENIED, PARequestStatus.COMPLETED]:
-            self.completed_at = datetime.now()
-            self.decision_date = datetime.now()
+            self.completed_at = now
+            self.decision_date = now
             self.decision_notes = notes
     
     def __repr__(self) -> str:

@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Annotated
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,11 +15,10 @@ from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.password import verify_password
 from app.models.user import User
 
 # OAuth2 scheme
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -52,7 +51,7 @@ async def get_current_user(
         if user_id is None or hospital_id is None:
             raise credentials_exception
             
-    except JWTError:
+    except (JWTError, ValueError):
         raise credentials_exception
     
     # Fetch user from database
@@ -60,6 +59,9 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     
     if user is None or not user.is_active:
+        raise credentials_exception
+
+    if str(user.hospital_id) != hospital_id:
         raise credentials_exception
         
     return user

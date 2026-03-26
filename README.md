@@ -73,6 +73,7 @@ Create a `.env` file:
 ```bash
 # Database
 DATABASE_URL=postgresql+asyncpg://postgres:admin@localhost:5432/healthPA
+TEST_DATABASE_URL=postgresql+asyncpg://postgres:admin@localhost:5432/healthPA_test
 
 # Redis
 REDIS_URL=redis://localhost:6379/0
@@ -104,11 +105,17 @@ docker-compose up --build
 # Install dependencies
 pip install -r requirements.txt
 
-# Initialize database
-python init_db.py
+# Unified database CLI
+python manage_db.py init
+python manage_db.py seed
+python manage_db.py reset
+python manage_db.py reset --seed
+python manage_db.py drop
 
-# Seed sample data (optional)
+# Backward-compatible shortcuts still work
+python init_db.py
 python seed_data.py
+python reset_db.py --seed
 
 # Start API server
 uvicorn app.main:app --reload
@@ -208,7 +215,7 @@ After seeding the database:
 ## Running Tests
 
 ```bash
-# Run all tests
+# Run all tests against PostgreSQL test database
 pytest tests/ -v
 
 # Run with coverage

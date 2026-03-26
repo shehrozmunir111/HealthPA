@@ -1,5 +1,5 @@
 """
-Pytest Configuration and Fixtures
+Pytest configuration backed by PostgreSQL.
 """
 
 import asyncio
@@ -9,23 +9,32 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.core.config import settings
 from app.core.database import Base, get_db
-from app.core.security import create_access_token
 from app.core.password import get_password_hash
+from app.core.security import create_access_token
 from app.main import app
 from app.models.hospital import Hospital
-from app.models.user import User, UserRole
-from app.models.patient import Patient
 from app.models.pa_request import PARequest, PARequestStatus
+from app.models.patient import Patient
+from app.models.user import User, UserRole
 
 
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+TEST_DATABASE_URL = settings.effective_test_database_url
+TEST_DATABASE_SCHEMA = settings.TEST_DATABASE_SCHEMA
 
-test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True)
+admin_test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True)
+test_engine = create_async_engine(
+    TEST_DATABASE_URL,
+    echo=False,
+    future=True,
+    connect_args={"server_settings": {"search_path": TEST_DATABASE_SCHEMA}},
+)
 TestingSessionLocal = sessionmaker(
     test_engine,
     class_=AsyncSession,
@@ -35,47 +44,72 @@ TestingSessionLocal = sessionmaker(
 )
 
 
+async def _truncate_all_tables() -> None:
+    """Clear all PostgreSQL tables between tests."""
+    async with test_engine.begin() as conn:
+        for table in reversed(Base.metadata.sorted_tables):
+            await conn.execute(
+                text(
+                    f'TRUNCATE TABLE "{TEST_DATABASE_SCHEMA}"."{table.name}" RESTART IDENTITY CASCADE'
+                )
+            )
+
+
 @pytest_asyncio.fixture(scope="session")
 def event_loop():
-    """Create an instance of the default event loop for each test case."""
+    """Create an instance of the default event loop for the test session."""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
 
 
-@pytest_asyncio.fixture(scope="function")
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    """Create a fresh database session for each test."""
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def prepare_test_database():
+    """Provision PostgreSQL test schema once per session."""
+    async with admin_test_engine.begin() as conn:
+        await conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{TEST_DATABASE_SCHEMA}"'))
+
     async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    
-    async with TestingSessionLocal() as session:
-        yield session
-        await session.rollback()
-    
+
+    yield
+
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
+    async with admin_test_engine.begin() as conn:
+        await conn.execute(text(f'DROP SCHEMA IF EXISTS "{TEST_DATABASE_SCHEMA}" CASCADE'))
 
-async def override_get_db(db_session: AsyncSession):
-    """Override get_db dependency."""
-    try:
-        yield db_session
-        await db_session.commit()
-    except Exception:
-        await db_session.rollback()
-        raise
+    await test_engine.dispose()
+    await admin_test_engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Create a fresh PostgreSQL-backed session for each test."""
+    await _truncate_all_tables()
+
+    async with TestingSessionLocal() as session:
+        yield session
+        await session.rollback()
+
+    await _truncate_all_tables()
 
 
 @pytest_asyncio.fixture
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Create a test client with overridden dependencies."""
-    app.dependency_overrides[get_db] = lambda: db_session
-    
+
+    async def _override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = _override_get_db
+
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-    
+
     app.dependency_overrides.clear()
 
 
@@ -89,7 +123,7 @@ async def test_hospital(db_session: AsyncSession) -> Hospital:
         address="123 Test Street",
         phone="555-0100",
         email="admin@testmedical.com",
-        is_active=True
+        is_active=True,
     )
     db_session.add(hospital)
     await db_session.commit()
@@ -107,7 +141,7 @@ async def test_hospital_2(db_session: AsyncSession) -> Hospital:
         address="456 Second Street",
         phone="555-0200",
         email="admin@second.com",
-        is_active=True
+        is_active=True,
     )
     db_session.add(hospital)
     await db_session.commit()
@@ -126,7 +160,7 @@ async def test_user(db_session: AsyncSession, test_hospital: Hospital) -> User:
         last_name="Doctor",
         role=UserRole.DOCTOR,
         is_active=True,
-        hospital_id=test_hospital.id
+        hospital_id=test_hospital.id,
     )
     db_session.add(user)
     await db_session.commit()
@@ -145,7 +179,7 @@ async def admin_user(db_session: AsyncSession, test_hospital: Hospital) -> User:
         last_name="User",
         role=UserRole.ADMIN,
         is_active=True,
-        hospital_id=test_hospital.id
+        hospital_id=test_hospital.id,
     )
     db_session.add(user)
     await db_session.commit()
@@ -164,7 +198,7 @@ async def test_user_2(db_session: AsyncSession, test_hospital_2: Hospital) -> Us
         last_name="Doctor",
         role=UserRole.DOCTOR,
         is_active=True,
-        hospital_id=test_hospital_2.id
+        hospital_id=test_hospital_2.id,
     )
     db_session.add(user)
     await db_session.commit()
@@ -187,7 +221,7 @@ async def test_patient(db_session: AsyncSession, test_hospital: Hospital) -> Pat
         address="789 Patient Lane",
         insurance_provider="Test Insurance",
         insurance_policy_number="POL123",
-        insurance_group_number="GRP456"
+        insurance_group_number="GRP456",
     )
     db_session.add(patient)
     await db_session.commit()
@@ -208,7 +242,7 @@ async def test_patient_2(db_session: AsyncSession, test_hospital_2: Hospital) ->
         phone="555-5678",
         email="patient@second.com",
         insurance_provider="Second Insurance",
-        insurance_policy_number="POL789"
+        insurance_policy_number="POL789",
     )
     db_session.add(patient)
     await db_session.commit()
@@ -217,7 +251,12 @@ async def test_patient_2(db_session: AsyncSession, test_hospital_2: Hospital) ->
 
 
 @pytest_asyncio.fixture
-async def test_pa_request(db_session: AsyncSession, test_hospital: Hospital, test_patient: Patient, test_user: User) -> PARequest:
+async def test_pa_request(
+    db_session: AsyncSession,
+    test_hospital: Hospital,
+    test_patient: Patient,
+    test_user: User,
+) -> PARequest:
     """Create a test PA request."""
     pa_request = PARequest(
         id=uuid4(),
@@ -232,7 +271,7 @@ async def test_pa_request(db_session: AsyncSession, test_hospital: Hospital, tes
         payer_id="PAY001",
         is_urgent=False,
         status=PARequestStatus.DRAFT,
-        requested_date=date(2024, 1, 15)
+        requested_date=date(2024, 1, 15),
     )
     db_session.add(pa_request)
     await db_session.commit()
@@ -247,7 +286,7 @@ def user_token(test_user: User, test_hospital: Hospital) -> str:
         data={
             "sub": str(test_user.id),
             "hospital_id": str(test_hospital.id),
-            "role": test_user.role.value
+            "role": test_user.role.value,
         }
     )
 
@@ -259,7 +298,7 @@ def admin_token(admin_user: User, test_hospital: Hospital) -> str:
         data={
             "sub": str(admin_user.id),
             "hospital_id": str(test_hospital.id),
-            "role": admin_user.role.value
+            "role": admin_user.role.value,
         }
     )
 
@@ -271,7 +310,7 @@ def user_2_token(test_user_2: User, test_hospital_2: Hospital) -> str:
         data={
             "sub": str(test_user_2.id),
             "hospital_id": str(test_hospital_2.id),
-            "role": test_user_2.role.value
+            "role": test_user_2.role.value,
         }
     )
 
