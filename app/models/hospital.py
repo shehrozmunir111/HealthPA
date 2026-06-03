@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.models.patient import Patient
     from app.models.pa_request import PARequest
+    from app.models.appointment import Appointment
+    from app.models.audit_log import AuditLog
 
 
 class Hospital(Base):
@@ -61,6 +63,7 @@ class Hospital(Base):
     patients: Mapped[List["Patient"]] = relationship("Patient", back_populates="hospital")
     pa_requests: Mapped[List["PARequest"]] = relationship("PARequest", back_populates="hospital")
     audit_logs: Mapped[List["AuditLog"]] = relationship("AuditLog", back_populates="hospital")
+    appointments: Mapped[List["Appointment"]] = relationship("Appointment", back_populates="hospital")
     
     def __repr__(self) -> str:
         return f"<Hospital(id={self.id}, name={self.name}, code={self.code})>"

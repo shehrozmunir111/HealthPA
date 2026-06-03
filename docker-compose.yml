@@ -13,6 +13,13 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
       - DEBUG=${DEBUG:-True}
+      # AWS SES
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_SES_REGION=${AWS_SES_REGION:-us-east-1}
+      - SES_SENDER_EMAIL=${SES_SENDER_EMAIL:-}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     volumes:
       - ./data/ocr_uploads:/app/data/ocr_uploads
     depends_on:
@@ -62,12 +69,43 @@ services:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/healthpa
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      # AWS SES
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_SES_REGION=${AWS_SES_REGION:-us-east-1}
+      - SES_SENDER_EMAIL=${SES_SENDER_EMAIL:-}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     depends_on:
       - db
       - redis
     command: celery -A app.core.celery_app worker --loglevel=info
     volumes:
       - ./data/ocr_uploads:/app/data/ocr_uploads
+    networks:
+      - healthpa-network
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthpa-celery-beat
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/healthpa
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      # AWS SES
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_SES_REGION=${AWS_SES_REGION:-us-east-1}
+      - SES_SENDER_EMAIL=${SES_SENDER_EMAIL:-}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    depends_on:
+      - db
+      - redis
+    # --schedule keeps the beat DB inside the container; fine for single-instance deployments
+    command: celery -A app.core.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule
     networks:
       - healthpa-network
 

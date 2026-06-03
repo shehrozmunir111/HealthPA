@@ -52,7 +52,22 @@ class Settings(BaseSettings):
     
     # Webhooks
     WEBHOOK_URLS: str = ""
-    
+
+    # AWS SES — Email
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_SES_REGION: str = "us-east-1"
+    SES_SENDER_EMAIL: str = "noreply@example.com"
+
+    # Admin alert email (receives fraud/lockout notifications)
+    ADMIN_EMAIL: str = ""
+
+    # Account lockout threshold
+    FAILED_LOGIN_MAX_ATTEMPTS: int = 5
+
+    # Frontend base URL (used in email links)
+    FRONTEND_URL: str = "http://localhost:3000"
+
     @property
     def sync_database_url(self) -> str:
         """Get synchronous database URL for Alembic."""

@@ -5,6 +5,7 @@ Pytest configuration backed by PostgreSQL.
 import asyncio
 from datetime import date
 from typing import AsyncGenerator
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -13,9 +14,11 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 from app.core.database import Base, get_db
+from app.core.middleware import rate_limiter
 from app.core.password import get_password_hash
 from app.core.security import create_access_token
 from app.main import app
@@ -28,11 +31,46 @@ from app.models.user import User, UserRole
 TEST_DATABASE_URL = settings.effective_test_database_url
 TEST_DATABASE_SCHEMA = settings.TEST_DATABASE_SCHEMA
 
-admin_test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True)
+
+# ---------------------------------------------------------------------------
+# Cross-cutting autouse fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Clear the in-memory rate limiter state before and after every test
+    so that tests don't bleed request-count state into each other."""
+    rate_limiter._requests.clear()
+    yield
+    rate_limiter._requests.clear()
+
+
+@pytest.fixture(autouse=True)
+def mock_email_tasks():
+    """Globally silence all email Celery task .delay() calls so tests never
+    attempt a broker connection.  Individual tests can override specific tasks
+    with their own @patch if they need to make assertions on the call."""
+    with (
+        patch("app.tasks.email.send_email.delay"),
+        patch("app.tasks.email.send_verification_email.delay"),
+        patch("app.tasks.email.send_password_reset_email.delay"),
+        patch("app.tasks.email.send_appointment_reminder.delay"),
+        patch("app.tasks.email.send_fraud_alert.delay"),
+    ):
+        yield
+
+# NullPool: each operation gets a fresh connection, no pool state bound to a
+# specific event loop. This prevents the asyncpg "attached to a different loop"
+# error that occurs when the pool is created in a different loop than the one
+# running the test fixtures.
+admin_test_engine = create_async_engine(
+    TEST_DATABASE_URL, echo=False, future=True, poolclass=NullPool
+)
 test_engine = create_async_engine(
     TEST_DATABASE_URL,
     echo=False,
     future=True,
+    poolclass=NullPool,
     connect_args={"server_settings": {"search_path": TEST_DATABASE_SCHEMA}},
 )
 TestingSessionLocal = sessionmaker(

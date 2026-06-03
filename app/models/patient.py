@@ -18,6 +18,7 @@ JSONType = JSON().with_variant(JSONB(), "postgresql")
 if TYPE_CHECKING:
     from app.models.hospital import Hospital
     from app.models.pa_request import PARequest
+    from app.models.appointment import Appointment
 
 
 class Patient(Base):
@@ -77,6 +78,7 @@ class Patient(Base):
     # Relationships
     hospital: Mapped["Hospital"] = relationship("Hospital", back_populates="patients")
     pa_requests: Mapped[List["PARequest"]] = relationship("PARequest", back_populates="patient")
+    appointments: Mapped[List["Appointment"]] = relationship("Appointment", back_populates="patient")
     
     @property
     def full_name(self) -> str:

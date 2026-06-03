@@ -5,10 +5,10 @@ Staff members belonging to a hospital. hospital_id enforces isolation.
 
 from uuid import uuid4
 from datetime import datetime
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 from enum import Enum as PyEnum
 
-from sqlalchemy import String, DateTime, Boolean, ForeignKey, Enum
+from sqlalchemy import String, DateTime, Boolean, ForeignKey, Enum, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,6 +18,7 @@ from app.core.password import get_password_hash
 if TYPE_CHECKING:
     from app.models.hospital import Hospital
     from app.models.pa_request import PARequest
+    from app.models.appointment import Appointment
 
 
 class UserRole(str, PyEnum):
@@ -82,12 +83,30 @@ class User(Base):
         nullable=False
     )
     last_login: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    
+
+    # Email verification
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    verification_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    verification_token_expires: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Password reset
+    reset_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    reset_token_expires: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Fraud / account lockout
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # Relationships
     hospital: Mapped["Hospital"] = relationship("Hospital", back_populates="users")
     pa_requests_created: Mapped[List["PARequest"]] = relationship(
-        "PARequest", 
+        "PARequest",
         foreign_keys="PARequest.created_by_id",
+        back_populates="created_by"
+    )
+    appointments_created: Mapped[List["Appointment"]] = relationship(
+        "Appointment",
+        foreign_keys="Appointment.created_by_id",
         back_populates="created_by"
     )
     
