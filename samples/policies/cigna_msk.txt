@@ -1,0 +1,11 @@
+Cigna Medical Coverage Policy — Musculoskeletal Imaging
+
+Knee:
+- Primary osteoarthritis of the right knee is ICD-10-CM M17.11; left knee M17.12;
+  bilateral is M17.0.
+- MRI of the knee without contrast is CPT 73721; with contrast is CPT 73722.
+- Knee x-ray, 1-2 views, is CPT 73560.
+
+Authorization criteria for knee MRI: failed conservative therapy (>= 6 weeks)
+OR mechanical symptoms (locking, instability) OR suspicion of internal
+derangement. Document prior treatment and exam findings.

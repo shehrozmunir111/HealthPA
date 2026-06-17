@@ -9,7 +9,16 @@ Versioning Strategy:
 
 from fastapi import APIRouter
 
-from app.routes import auth, hospitals, patients, pa_requests, batch, analytics, appointments
+from app.routes import (
+    auth,
+    hospitals,
+    patients,
+    pa_requests,
+    batch,
+    analytics,
+    appointments,
+    pa_ai,
+)
 
 router = APIRouter()
 
@@ -20,3 +29,4 @@ router.include_router(pa_requests.router, prefix="/pa-requests", tags=["PA-Workf
 router.include_router(batch.router, prefix="/batch", tags=["Batch-Operations"])
 router.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
 router.include_router(appointments.router, prefix="/appointments", tags=["Appointments"])
+router.include_router(pa_ai.router, prefix="/v1", tags=["AI-Coding"])

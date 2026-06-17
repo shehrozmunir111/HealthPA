@@ -45,7 +45,7 @@ async def get_pa_summary(
     
     status_counts = {}
     for status in PARequestStatus:
-        status_counts[status.value] = sum(1 for p in pa_requests if p.status == status)
+        status_counts[status.value] = sum(1 for pa in pa_requests if pa.status == status)
     
     total_count = len(pa_requests)
     approved_count = status_counts.get('approved', 0)
@@ -58,7 +58,7 @@ async def get_pa_summary(
         "total_requests": total_count,
         "status_breakdown": status_counts,
         "approval_rate": round(approval_rate, 2),
-        "urgent_requests": sum(1 for p in pa_requests if p.is_urgent)
+        "urgent_requests": sum(1 for pa in pa_requests if pa.is_urgent)
     }
 
 
@@ -152,7 +152,7 @@ async def get_payer_breakdown(
             "approval_rate": round(rate, 2)
         })
     
-    payer_breakdown.sort(key=lambda x: x["total_requests"], reverse=True)
+    payer_breakdown.sort(key=lambda row: row["total_requests"], reverse=True)
     
     return {
         "period_days": days,
@@ -241,8 +241,8 @@ async def get_patient_stats(
     pa_result = await db.execute(pa_query)
     pa_counts = pa_result.all()
     
-    patients_with_pa = sum(1 for c in pa_counts if c.pa_count > 0)
-    avg_pa_per_patient = sum(c.pa_count for c in pa_counts) / len(pa_counts) if pa_counts else 0
+    patients_with_pa = sum(1 for row in pa_counts if row.pa_count > 0)
+    avg_pa_per_patient = sum(row.pa_count for row in pa_counts) / len(pa_counts) if pa_counts else 0
     
     return {
         "total_patients": total_patients,

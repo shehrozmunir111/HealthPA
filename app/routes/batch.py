@@ -111,7 +111,7 @@ async def batch_import_pa_requests(
             "success": success_count,
             "failed": failed_count
         },
-        "details": [r.model_dump() for r in results]
+        "details": [result.model_dump() for result in results]
     }
 
 
@@ -320,5 +320,5 @@ async def batch_import_patients(
             "success": success_count,
             "failed": failed_count
         },
-        "details": [r.model_dump() for r in results]
+        "details": [result.model_dump() for result in results]
     }

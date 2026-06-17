@@ -15,8 +15,8 @@ passlib[bcrypt]==1.7.4
 python-dotenv==1.0.0
 
 # Validation & Serialization
-pydantic==2.5.3
-pydantic-settings==2.1.0
+pydantic==2.11.9                  # bumped for langchain-pinecone (needs >=2.11.1)
+pydantic-settings==2.14.1         # pulled by ragas
 email-validator==2.1.0
 
 # Async & Background Tasks
@@ -26,7 +26,23 @@ redis==5.0.1
 # OCR & AI
 pytesseract==0.3.10
 Pillow==10.2.0
-openai==1.12.0
+openai>=1.58.1,<2.0.0             # bumped for langchain-openai compatibility (AsyncOpenAI API stable)
+
+# AI Layer — LangGraph / LangChain (grounded coding, HITL, agents)
+# Ranges let pip resolve a mutually compatible set (langchain-pinecone vs
+# langchain-tavily disagree on aiohttp at older pins); frozen after install.
+langchain-core==0.3.86            # bumped by ragas
+langgraph==0.2.74
+langgraph-checkpoint-postgres==2.0.21
+psycopg[binary]==3.2.3
+langchain-openai==0.3.28          # LM Studio (OpenAI-compatible) chat + nomic embeddings
+langchain-groq==0.2.5             # cloud chat option
+langchain-pinecone==0.2.13        # vector store (prod); uses pinecone v6
+pinecone==6.0.2
+langchain-tavily==0.1.6           # web search tool for policy-QA agent
+langsmith==0.3.45                 # optional observability (env-gated)
+pypdf==5.1.0                      # policy PDF ingestion
+ragas==0.2.15                     # RAG/extraction evaluation (faithfulness, recall, etc.)
 
 # AWS SES
 boto3==1.34.34
@@ -37,4 +53,4 @@ python-dateutil==2.8.2
 # Testing
 pytest==7.4.4
 pytest-asyncio==0.23.3
-httpx==0.26.0
+httpx==0.28.1                    # bumped for langchain-pinecone (needs >=0.28.0)

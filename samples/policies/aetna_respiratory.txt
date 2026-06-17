@@ -1,0 +1,15 @@
+Aetna Prior Authorization Policy — Lower Respiratory Infections
+
+Coverage and coding guidance:
+- Pneumonia, unspecified organism is coded J18.9 under ICD-10-CM.
+- Bacterial pneumonia, not elsewhere classified, is J15.9.
+- Acute bronchitis, unspecified, is J20.9.
+
+Imaging:
+- A single-view chest x-ray is CPT 71045.
+- A two-view (frontal and lateral) chest x-ray is CPT 71046.
+- Chest CT without contrast is CPT 71250.
+
+Medical necessity: imaging must be supported by documented signs/symptoms
+(e.g., productive cough, fever, abnormal lung exam). Prior authorization is not
+required for a standard two-view chest x-ray when pneumonia is suspected.

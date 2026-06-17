@@ -1,6 +1,28 @@
 # HealthPA
 
-HealthPA is a production-ready, multi-tenant healthcare SaaS built on FastAPI. It provides hospital-scoped data isolation, a full prior-authorization workflow, asynchronous email notifications via AWS SES, appointment scheduling with automated reminders, fraud detection, and a PostgreSQL-backed test suite with 80 passing tests.
+> Multi-tenant healthcare prior-authorization SaaS with grounded, human-reviewed AI medical coding.
+
+HealthPA is a production-ready, multi-tenant healthcare platform built on FastAPI. It provides
+hospital-scoped data isolation, a full prior-authorization workflow, asynchronous email
+notifications via AWS SES, appointment scheduling with automated reminders, fraud detection, and a
+**grounded AI coding layer** (RAG + human-in-the-loop review + evaluation). The codebase ships with
+**138 passing tests** on a PostgreSQL-backed suite; the AI tests run fully offline.
+
+**Status:** 138 tests passing · Python 3.11 · FastAPI · PostgreSQL 15 · LangGraph · Pinecone · RAGAS
+
+## Table of Contents
+
+- [Highlights](#highlights)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Configuration](#configuration)
+- [Local Development](#local-development)
+- [Docker](#docker)
+- [API Reference](#api-reference)
+- [AI: Grounded Coding, Human Review & Eval](#ai-grounded-coding-human-review--eval)
+- [Email Features](#email-features)
+- [Testing](#testing)
+- [Security Notes](#security-notes)
 
 ---
 
@@ -21,6 +43,7 @@ HealthPA is a production-ready, multi-tenant healthcare SaaS built on FastAPI. I
 - **Redis caching** — TTL-based with hospital/patient cache invalidation
 - **Rate limiting** — in-memory sliding window (10 req/60s auth, 100 req/60s general)
 - **HIPAA audit trail** — every create/read/update/delete logged to `audit_logs`
+- **AI grounded coding** — RAG-grounded ICD-10/CPT extraction with citations, human-in-the-loop review (LangGraph `interrupt`/resume), multi-agent routing, and RAGAS evaluation (see below)
 
 ---
 
@@ -36,7 +59,11 @@ HealthPA is a production-ready, multi-tenant healthcare SaaS built on FastAPI. I
 | Task Queue | Celery 5 + Celery Beat |
 | Email | AWS SES via boto3 |
 | OCR | Tesseract + pdf2image |
-| AI | Groq (Llama 3.1) |
+| AI orchestration | LangGraph + LangChain (HITL `interrupt`/resume) |
+| LLM / embeddings | LM Studio (gemma, nomic) by default; Groq / OpenAI / Anthropic via env |
+| Vector store | Pinecone (per-hospital namespaces) |
+| Evaluation | RAGAS + deterministic metrics |
+| Observability | LangSmith (optional, env-gated) |
 | Containers | Docker + Docker Compose |
 | Testing | pytest, pytest-asyncio, httpx |
 
@@ -47,37 +74,42 @@ HealthPA is a production-ready, multi-tenant healthcare SaaS built on FastAPI. I
 ```
 HealthPA/
 ├── app/
-│   ├── core/               # config, database, security, middleware, cache
-│   ├── models/             # SQLAlchemy domain models
-│   │   ├── hospital.py
-│   │   ├── user.py         # + verification/reset/lockout fields
-│   │   ├── patient.py
-│   │   ├── pa_request.py
-│   │   ├── appointment.py  # NEW
-│   │   └── audit_log.py
+│   ├── core/                        # config, database, security, middleware, cache, celery
+│   ├── models/                      # hospital, user, patient, pa_request, appointment, audit_log
 │   ├── routes/
-│   │   ├── auth.py         # + verify-email, forgot/reset-password, lockout
-│   │   ├── appointments.py # NEW
-│   │   ├── hospitals.py
-│   │   ├── patients.py
-│   │   ├── pa_requests.py
-│   │   ├── batch.py
-│   │   └── analytics.py
-│   ├── schemas/
-│   ├── services/           # OCR, webhooks, audit, AI
-│   ├── tasks/
-│   │   └── email.py        # NEW — Celery SES tasks + HTML templates
+│   │   ├── auth.py                  # login, email verification, password reset, lockout
+│   │   ├── appointments.py
+│   │   ├── hospitals.py / patients.py / pa_requests.py
+│   │   ├── batch.py / analytics.py
+│   │   └── pa_ai.py                 # AI grounded-coding endpoints  (/api/v1/...)
+│   ├── schemas/                     # Pydantic models (+ codes.py for the AI layer)
+│   ├── services/
+│   │   ├── ai_engine.py             # legacy Groq extractor (rule/LLM fallback)
+│   │   ├── ocr_service.py / webhook_service.py / audit_service.py
+│   │   ├── llm_provider.py          # chat + embeddings factory (LM Studio / Groq / cloud)
+│   │   ├── vector_store.py          # Pinecone ↔ in-memory, per-hospital namespaces
+│   │   ├── rag_service.py           # ingest / retrieve / grade / rewrite / fingerprint cache
+│   │   ├── reranker.py              # lexical + LLM rerank
+│   │   ├── grounded_extractor.py    # citation-grounded code extraction (+ rule backstop)
+│   │   ├── guardrails.py            # input / output guards
+│   │   ├── code_extraction_graph.py # LangGraph HITL (interrupt / resume)
+│   │   ├── coding_supervisor.py     # multi-agent router
+│   │   ├── coding_agent.py          # ReAct policy-QA agent (+ Tavily)
+│   │   └── long_term_memory.py      # per-coder / per-hospital recall
+│   ├── eval/                        # evaluators + RAGAS + labelled dataset (cases.json)
+│   ├── tasks/email.py               # Celery SES tasks + HTML templates
 │   └── main.py
-├── tests/                  # 80 passing tests (PostgreSQL-backed)
-├── alembic/
-│   └── versions/
-│       └── 0001_add_ses_email_features.py   # NEW
-├── data/
-├── .env.example            # NEW — all env vars documented
-├── pytest.ini              # NEW
-├── docker-compose.yml      # + celery_beat service
-├── manage_db.py
-└── requirements.txt        # + boto3
+├── scripts/
+│   ├── ingest_policies.py           # CLI: ingest policy docs into a hospital's index
+│   ├── evaluate.py                  # deterministic + RAGAS eval runner
+│   └── verify_live.py               # end-to-end live smoke (LM Studio + Pinecone)
+├── tests/                           # 138 passing tests (PostgreSQL-backed; AI tests offline)
+├── alembic/versions/                # 0001 SES email features · 0002 AI audit actions
+├── data/policies/                   # policy corpus, per-hospital subdirectories
+├── .env.example                     # all env vars documented
+├── pytest.ini
+├── docker-compose.yml               # api · db · redis · celery worker · celery beat
+└── requirements.txt
 ```
 
 ---
@@ -120,7 +152,7 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # ── Database ──────────────────────────────────────────────
-DATABASE_URL=postgresql+asyncpg://postgres:admin@localhost:5432/healthpa
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/healthpa
 TEST_DATABASE_URL=
 TEST_DATABASE_SCHEMA=healthpa_test
 
@@ -136,14 +168,29 @@ ADMIN_EMAIL=
 FAILED_LOGIN_MAX_ATTEMPTS=5
 FRONTEND_URL=http://localhost:3000
 
-# ── AI / Groq ─────────────────────────────────────────────
+# ── AI layer (grounded coding / RAG / HITL) ───────────────
+AI_ENABLED=True
+CHAT_LLM_PROVIDER=openai                     # openai | lmstudio | groq | anthropic
+CHAT_LLM_MODEL=google/gemma-4-12b-qat
+LLM_BASE_URL=http://localhost:1234/v1        # LM Studio; "" for cloud
 GROQ_API_KEY=
+EMBEDDING_PROVIDER=openai                     # openai | lmstudio | local (offline hashing)
+EMBEDDING_MODEL=text-embedding-nomic-embed-text-v1.5
+EMBEDDING_DIM=768
+RAG_VECTOR_BACKEND=pinecone                   # pinecone | memory (tests/offline)
+PINECONE_API_KEY=
+PINECONE_INDEX=healthpa-ai
+HITL_CHECKPOINTER=postgres                     # postgres (durable) | memory
+ENABLE_WEB_SEARCH=True
+TAVILY_API_KEY=
+LANGSMITH_TRACING=False
+LANGSMITH_API_KEY=
 
 # ── Webhooks ──────────────────────────────────────────────
 WEBHOOK_URLS=
 ```
 
-> **Note:** If `AWS_ACCESS_KEY_ID` is empty, email tasks log a warning and skip sending — safe for local development without SES credentials.
+> **Note:** See `.env.example` for the complete, commented reference. If `AWS_ACCESS_KEY_ID` is empty, email tasks log a warning and skip sending — safe for local development without SES credentials. If the AI provider/Pinecone aren't configured, the AI layer degrades gracefully (rule-based fallback) and the test suite still runs fully offline.
 
 ---
 
@@ -313,6 +360,88 @@ Failed login attempts are tracked on the `User` record. After `FAILED_LOGIN_MAX_
 
 ---
 
+## AI: Grounded Coding, Human Review & Eval
+
+The AI layer turns raw clinical notes into **policy-grounded** ICD-10/CPT codes that a
+human signs off on before they're finalized. It never invents codes: every emitted code
+must appear in retrieved payer/coding policy and carry a citation, or it is dropped.
+
+### How it works
+
+1. **Ingestion (RAG)** — payer/coding-policy docs (PDF/txt) are chunked, embedded, and
+   upserted into a **Pinecone** namespace per `hospital_id` (hard tenant isolation).
+   Ingestion is idempotent (stable chunk ids) and fingerprint-cached (no re-embed when
+   the corpus is unchanged).
+2. **Adaptive retrieval** — retrieve → **grade** relevance (LCEL structured output) →
+   if weak, **rewrite** the query and retry → **rerank** (lexical default, optional LLM).
+3. **Grounded extraction** — an LLM proposes codes *from the retrieved policy only*,
+   with citations; ungrounded codes are dropped. If the LLM/policy is unavailable, a
+   deterministic rule-based backstop runs (flagged, for review) so the flow never blocks.
+4. **HITL review (LangGraph)** — after extraction the graph `interrupt()`s and pauses
+   with the proposed codes; a reviewer resumes via `Command(resume=...)` to
+   **approve / reject / edit**. State is persisted by a Postgres checkpointer keyed by
+   the PA case id, so a paused review survives a restart.
+5. **Agents** — a supervisor routes free-text requests (extract / review / policy-QA);
+   the policy-QA path is a ReAct agent with `search_policies` + optional Tavily web
+   search (web results are non-authoritative and never assign codes).
+6. **Long-term memory** — per-coder/per-hospital corrections are stored and recalled so
+   the system learns recurring edits.
+7. **Guardrails** — input guard (prompt-injection, length, soft PHI flag) and output
+   guard (every code grounded + cited).
+
+### Providers (provider abstraction)
+
+Configured via `.env` — defaults to a local **LM Studio** server (OpenAI-compatible):
+
+- Chat: `CHAT_LLM_PROVIDER=openai`, `CHAT_LLM_MODEL=google/gemma-4-12b-qat`,
+  `LLM_BASE_URL=http://localhost:1234/v1` (switch to `groq`/`anthropic` via env)
+- Embeddings: `EMBEDDING_PROVIDER=openai`, `text-embedding-nomic-embed-text-v1.5` (768-dim);
+  set `EMBEDDING_PROVIDER=local` for offline deterministic hashing embeddings
+- Vectors: Pinecone (`PINECONE_API_KEY`, `PINECONE_INDEX`, dim 768/cosine)
+- Observability: optional LangSmith (`LANGSMITH_TRACING=true`)
+
+### Endpoints (JWT + `hospital_id` scoped)
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/v1/pa/{id}/extract` | RAG + rerank + grounded extraction; pauses for review |
+| GET | `/api/v1/pa/{id}/proposed-codes` | Proposed codes + citations (from the paused checkpoint) |
+| POST | `/api/v1/pa/{id}/review` | `{decision: approve\|reject\|edit, edited_codes?}` → resume + finalize |
+| POST | `/api/v1/pa/{id}/ask` | Coder policy-QA (ReAct/RAG, web search optional) |
+| POST | `/api/v1/policies/reindex` | Rebuild the hospital's persistent index (`{force?}`; cached otherwise) |
+
+Audit events `ai_codes_proposed` and `codes_reviewed` (who / when / decision / before→after)
+are written to `audit_logs`.
+
+### Ingest policy docs
+
+```bash
+python -m scripts.ingest_policies --hospital <HOSPITAL_UUID> \
+    --dir data/policies/<HOSPITAL_UUID> --payer Aetna --code-system ICD10
+```
+
+### Evaluation (RAGAS + deterministic)
+
+`scripts/evaluate.py` scores a labelled dataset (`app/eval/cases.json`):
+
+- **Deterministic** (offline, no LLM): code precision / recall / F1 vs gold, retrieval recall@k
+- **RAGAS** (needs a chat model): faithfulness, answer relevancy, context precision, context recall
+- **LLM-as-judge**: citation faithfulness
+
+```bash
+python -m scripts.evaluate              # deterministic only (offline)
+python -m scripts.evaluate --use-llm    # use the chat model for extraction
+python -m scripts.evaluate --ragas      # add RAGAS metrics (LM Studio/Groq must be reachable)
+python -m scripts.evaluate --judge      # add LLM-as-judge
+```
+
+> Grounded extraction and RAGAS require a reachable chat model (LM Studio running, or a
+> Groq key). The full **test suite is fully offline** — fake LLMs, hashing embeddings, an
+> in-memory vector backend, and an in-memory checkpointer — and needs neither LM Studio
+> nor Pinecone.
+
+---
+
 ## Testing
 
 The test suite uses a real PostgreSQL database in an isolated `healthpa_test` schema. No mocking of the database layer.
@@ -326,8 +455,10 @@ pytest tests/ --cov=app --cov-report=html
 ```
 
 ```
-80 passed in ~32s
+138 passed in ~70s
 ```
+
+The AI tests are fully offline (fake LLMs, hashing embeddings, in-memory vector store + checkpointer) — no LM Studio or Pinecone required.
 
 ### Test layout
 
@@ -338,6 +469,15 @@ pytest tests/ --cov=app --cov-report=html
 | `test_hospitals.py` | Hospital CRUD, admin restriction |
 | `test_patients.py` | Patient CRUD, hospital isolation |
 | `test_pa_requests.py` | PA workflow, FSM transitions, cross-hospital isolation |
+| `test_ai_provider.py` | Provider abstraction, embeddings, vector-store tenant isolation |
+| `test_ai_rag.py` | Ingestion, fingerprint cache, retrieval, filters, rerank, grade/rewrite |
+| `test_ai_extraction.py` | Grounded extraction, grounding filter, auto-citation, fallback |
+| `test_ai_guardrails.py` | Input guard, code grounding, output guard |
+| `test_ai_hitl.py` | Interrupt/resume (approve/reject/edit), rewrite loop, tenant fallback |
+| `test_ai_agents.py` | Supervisor routing, ReAct agent, long-term memory |
+| `test_ai_api.py` | AI endpoints, audit, API-level tenant isolation |
+| `test_ai_eval.py` | Deterministic evaluators + harness |
+| `test_ai_ragas.py` | RAGAS sample construction + offline skip path |
 
 ---
 

@@ -106,7 +106,7 @@ class FSMValidator:
         """Validate transition and raise FSMTransitionError if invalid."""
         if not cls.can_transition(from_status, to_status):
             allowed = cls.get_allowed_transitions(from_status)
-            allowed_str = ", ".join(s.value for s in allowed) if allowed else "none (terminal state)"
+            allowed_str = ", ".join(status.value for status in allowed) if allowed else "none (terminal state)"
             raise FSMTransitionError(
                 f"Invalid transition from '{from_status.value}' to '{to_status.value}'. "
                 f"Allowed transitions: {allowed_str}"

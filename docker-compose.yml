@@ -20,8 +20,32 @@ services:
       - SES_SENDER_EMAIL=${SES_SENDER_EMAIL:-}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      # AI layer (grounded coding / RAG / HITL). LM Studio runs on the host;
+      # host.docker.internal lets the container reach it.
+      - AI_ENABLED=${AI_ENABLED:-True}
+      - CHAT_LLM_PROVIDER=${CHAT_LLM_PROVIDER:-openai}
+      - CHAT_LLM_MODEL=${CHAT_LLM_MODEL:-google/gemma-4-12b-qat}
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://host.docker.internal:1234/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-openai}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-nomic-embed-text-v1.5}
+      - EMBEDDING_DIM=${EMBEDDING_DIM:-768}
+      - RAG_VECTOR_BACKEND=${RAG_VECTOR_BACKEND:-pinecone}
+      - PINECONE_API_KEY=${PINECONE_API_KEY:-}
+      - PINECONE_INDEX=${PINECONE_INDEX:-healthpa-ai}
+      - HITL_CHECKPOINTER=${HITL_CHECKPOINTER:-postgres}
+      - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH:-True}
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-False}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-HealthPA-AI}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data/ocr_uploads:/app/data/ocr_uploads
+      - ./data/rag_state:/app/data/rag_state
+      - ./data/policies:/app/data/policies
     depends_on:
       db:
         condition: service_healthy

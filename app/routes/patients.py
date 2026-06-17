@@ -61,7 +61,7 @@ async def list_patients(
         description=f"Listed {len(patients)} patients"
     )
     
-    patients_data = [PatientResponse.model_validate(p).model_dump() for p in patients]
+    patients_data = [PatientResponse.model_validate(patient).model_dump() for patient in patients]
     await cache_service.set(cache_key, patients_data, ttl_seconds=300)
     
     return patients

@@ -216,7 +216,7 @@ async def update_pa_status(
         )
     except FSMTransitionError as e:
         allowed = FSMValidator.get_allowed_transitions(pa_request.status)
-        allowed_str = [s.value for s in allowed] if allowed else []
+        allowed_str = [status.value for status in allowed] if allowed else []
         raise BadRequestException(
             f"{str(e)} Allowed transitions from current status: {allowed_str}"
         )

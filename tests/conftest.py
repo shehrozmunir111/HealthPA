@@ -46,6 +46,44 @@ def reset_rate_limiter():
 
 
 @pytest.fixture(autouse=True)
+def ai_offline_defaults(monkeypatch):
+    """Force the AI layer fully offline + deterministic for every test.
+
+    Real LLMs (LM Studio/Groq) and Pinecone are never contacted: embeddings use
+    the deterministic hashing model, the vector store is the in-process memory
+    backend, the HITL checkpointer is in-memory, web search and LangSmith are
+    off. Tests that exercise the AI path inject a FakeListChatModel explicitly.
+    """
+    monkeypatch.setattr(settings, "AI_ENABLED", True, raising=False)
+    monkeypatch.setattr(settings, "EMBEDDING_PROVIDER", "local", raising=False)
+    monkeypatch.setattr(settings, "RAG_VECTOR_BACKEND", "memory", raising=False)
+    monkeypatch.setattr(settings, "HITL_CHECKPOINTER", "memory", raising=False)
+    monkeypatch.setattr(settings, "ENABLE_WEB_SEARCH", False, raising=False)
+    monkeypatch.setattr(settings, "LANGSMITH_TRACING", False, raising=False)
+
+    # Isolate per-hospital corpus fingerprints in a throwaway dir per test.
+    import tempfile
+
+    state_dir = tempfile.mkdtemp(prefix="healthpa_rag_")
+    monkeypatch.setattr(settings, "RAG_STATE_DIR", state_dir, raising=False)
+
+    def _reset():
+        try:
+            from app.services.vector_store import reset_memory_stores
+
+            reset_memory_stores()
+        except Exception:
+            pass
+
+    _reset()
+    yield
+    _reset()
+    import shutil
+
+    shutil.rmtree(state_dir, ignore_errors=True)
+
+
+@pytest.fixture(autouse=True)
 def mock_email_tasks():
     """Globally silence all email Celery task .delay() calls so tests never
     attempt a broker connection.  Individual tests can override specific tasks

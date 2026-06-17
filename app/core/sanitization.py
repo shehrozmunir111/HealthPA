@@ -167,8 +167,8 @@ class InputSanitizer:
                 sanitized[key] = cls.sanitize_dict(value, max_length)
             elif isinstance(value, list):
                 sanitized[key] = [
-                    cls.sanitize_string(str(v), max_length) if isinstance(v, str) else v
-                    for v in value
+                    cls.sanitize_string(str(element), max_length) if isinstance(element, str) else element
+                    for element in value
                 ]
             else:
                 sanitized[key] = value
@@ -183,7 +183,7 @@ def sanitize_response(data: Any) -> Any:
     if isinstance(data, str):
         return escape(data)
     elif isinstance(data, dict):
-        return {k: sanitize_response(v) for k, v in data.items()}
+        return {key: sanitize_response(value) for key, value in data.items()}
     elif isinstance(data, (list, tuple)):
         return [sanitize_response(item) for item in data]
     return data

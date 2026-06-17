@@ -1,0 +1,23 @@
+[
+  {
+    "id": "pneumonia-cxr",
+    "clinical_notes": "Adult patient with productive cough, fever, and crackles on the right base. Chest imaging ordered; pneumonia, unspecified organism. Two-view chest x-ray performed.",
+    "policy": "Aetna prior authorization policy for lower respiratory infections. Pneumonia, unspecified organism is coded J18.9 under ICD-10-CM. A two-view chest x-ray is CPT 71046; single-view is CPT 71045. Imaging must be medically necessary.",
+    "gold_codes": ["J18.9", "71046"],
+    "retrieval_terms": ["J18.9", "71046"]
+  },
+  {
+    "id": "knee-mri-oa",
+    "clinical_notes": "Patient with chronic right knee pain and stiffness, imaging consistent with osteoarthritis. MRI of the right knee without contrast requested.",
+    "policy": "Cigna policy for knee complaints. MRI of the knee without contrast is CPT 73721. Primary osteoarthritis of the right knee is ICD-10-CM M17.11; left knee is M17.12.",
+    "gold_codes": ["M17.11", "73721"],
+    "retrieval_terms": ["M17.11", "73721"]
+  },
+  {
+    "id": "diabetes-a1c",
+    "clinical_notes": "Type 2 diabetes mellitus without complications, routine follow-up. Hemoglobin A1c laboratory test ordered.",
+    "policy": "UnitedHealthcare policy for diabetes management. Type 2 diabetes mellitus without complications is ICD-10-CM E11.9. Hemoglobin A1c (glycated hemoglobin) testing is CPT 83036.",
+    "gold_codes": ["E11.9", "83036"],
+    "retrieval_terms": ["E11.9", "83036"]
+  }
+]

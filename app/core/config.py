@@ -49,7 +49,74 @@ class Settings(BaseSettings):
     
     # AI/Groq
     GROQ_API_KEY: str = ""
-    
+
+    # ── AI Layer (LangGraph / RAG / HITL) ────────────────────────
+    # Master switch; when False the grounded layer is skipped and the
+    # existing rule/LLM extractor is used (graceful fallback).
+    AI_ENABLED: bool = True
+
+    # Chat model provider abstraction.
+    #   openai/lmstudio -> OpenAI-compatible client (drives local LM Studio)
+    #   groq            -> Groq cloud
+    #   anthropic       -> Anthropic cloud
+    CHAT_LLM_PROVIDER: str = "openai"
+    CHAT_LLM_MODEL: str = "google/gemma-4-12b-qat"
+    LLM_BASE_URL: str = "http://localhost:1234/v1"   # LM Studio; "" for cloud
+    OPENAI_API_KEY: str = ""                          # falls back to "lm-studio"
+    ANTHROPIC_API_KEY: str = ""
+    CHAT_LLM_TEMPERATURE: float = 0.0
+    CHAT_MAX_TOKENS: int = 1024
+    CHAT_LLM_TIMEOUT: int = 60
+
+    # Embeddings provider.
+    #   openai/lmstudio -> nomic via LM Studio (real semantic, 768-dim)
+    #   local           -> deterministic hashing embeddings (offline / tests)
+    EMBEDDING_PROVIDER: str = "openai"
+    EMBEDDING_MODEL: str = "text-embedding-nomic-embed-text-v1.5"
+    EMBEDDING_BASE_URL: str = ""                       # falls back to LLM_BASE_URL
+    EMBEDDING_DIM: int = 768                            # nomic; Pinecone index dim
+
+    # Vector store backend: "pinecone" (prod) | "memory" (tests/offline)
+    RAG_VECTOR_BACKEND: str = "pinecone"
+    PINECONE_API_KEY: str = ""
+    PINECONE_INDEX: str = "healthpa-ai"
+    PINECONE_CLOUD: str = "aws"
+    PINECONE_REGION: str = "us-east-1"
+
+    # Where per-hospital corpus fingerprints are cached (skip re-embed when
+    # the policy corpus is unchanged). One JSON file per hospital.
+    RAG_STATE_DIR: str = "data/rag_state"
+
+    # Root dir for policy source documents; the reindex endpoint reads each
+    # hospital's corpus from "{POLICY_DOCS_DIR}/{hospital_id}/".
+    POLICY_DOCS_DIR: str = "data/policies"
+
+    # Retrieval / RAG tuning
+    RAG_CHUNK_SIZE: int = 1000
+    RAG_CHUNK_OVERLAP: int = 150
+    RAG_FETCH_K: int = 12          # candidates pulled before rerank
+    RAG_TOP_K: int = 4            # chunks kept after rerank
+    RAG_RERANK: bool = True
+    RAG_RERANK_LLM: bool = False   # lexical by default; LLM reranker optional
+    CHAT_MAX_REWRITES: int = 1     # adaptive-RAG rewrite attempts
+
+    # Long-term (per-coder/hospital) memory
+    LONG_TERM_MEMORY: bool = True
+
+    # HITL checkpointer: "postgres" (durable, survives restart) | "memory"
+    HITL_CHECKPOINTER: str = "postgres"
+
+    # Web search tool for the policy-QA agent (non-authoritative; kept out of
+    # code grounding)
+    ENABLE_WEB_SEARCH: bool = True
+    TAVILY_API_KEY: str = ""
+
+    # Observability (env-gated; forced off in tests)
+    LANGSMITH_TRACING: bool = False
+    LANGSMITH_PROJECT: str = "HealthPA-AI"
+    LANGSMITH_ENDPOINT: str = "https://api.smith.langchain.com"
+    LANGSMITH_API_KEY: str = ""
+
     # Webhooks
     WEBHOOK_URLS: str = ""
 

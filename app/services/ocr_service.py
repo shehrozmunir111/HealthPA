@@ -91,7 +91,7 @@ def _process_image(image_path: str) -> dict:
     text = pytesseract.image_to_string(image)
     
     conf_data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
-    conf_values = [int(c) for c in conf_data['conf'] if int(c) > 0]
+    conf_values = [int(conf) for conf in conf_data['conf'] if int(conf) > 0]
     avg_confidence = sum(conf_values) / len(conf_values) if conf_values else 0
     
     return {
@@ -125,7 +125,7 @@ def _process_pdf(pdf_path: str) -> dict:
         all_text_parts.append(f"--- Page {page_num} ---\n{page_text}")
         
         conf_data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
-        conf_values = [int(c) for c in conf_data['conf'] if int(c) > 0]
+        conf_values = [int(conf) for conf in conf_data['conf'] if int(conf) > 0]
         if conf_values:
             all_confidences.extend(conf_values)
     

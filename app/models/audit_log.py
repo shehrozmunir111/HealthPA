@@ -32,6 +32,9 @@ class AuditAction(str, PyEnum):
     EXPORT = "export"
     PRINT = "print"
     STATUS_CHANGE = "status_change"
+    # AI grounded-coding layer
+    AI_CODES_PROPOSED = "ai_codes_proposed"
+    CODES_REVIEWED = "codes_reviewed"
 
 
 class AuditLog(Base):
