@@ -21,6 +21,14 @@ resource "aws_security_group" "app" {
   }
 
   ingress {
+    description = "expense-forecasting app (second app on this host)"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     description = "SSH (locked to your IP)"
     from_port   = 22
     to_port     = 22

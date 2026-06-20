@@ -67,3 +67,46 @@ resource "aws_ssm_parameter" "env" {
 
   tags = { Name = "${var.project_prefix}-env" }
 }
+
+# ── Second app: expense-forecasting .env ─────────────────────────────
+# Uses a separate database (expenseforecast_db) on the SAME RDS instance,
+# its own Redis container, and cloud LLM (no local LM Studio in prod).
+locals {
+  expense_database_url = "postgresql+psycopg://${var.db_username}:${var.db_password}@${aws_db_instance.main.address}:5432/expenseforecast_db"
+
+  expense_env_file = <<-EOT
+    APP_NAME=FinanceFlow
+    DEBUG=False
+    LOG_LEVEL=INFO
+
+    DATABASE_URL=${local.expense_database_url}
+    REDIS_URL=redis://redis:6379/0
+
+    LLM_PROVIDER=${var.expense_llm_provider}
+    LLM_MODEL=${var.expense_llm_model}
+    LLM_MAX_TOKENS=2048
+    LLM_BATCH_SIZE=20
+    OPENAI_API_KEY=${var.openai_api_key}
+    ANTHROPIC_API_KEY=${var.anthropic_api_key}
+
+    CHAT_LLM_PROVIDER=${var.expense_llm_provider}
+    CHAT_LLM_MODEL=${var.expense_llm_model}
+    CHAT_LLM_TEMPERATURE=0.0
+    CHAT_MAX_TOKENS=512
+
+    EMBEDDING_PROVIDER=openai
+    EMBEDDING_MODEL=text-embedding-3-small
+
+    LANGSMITH_TRACING=False
+  EOT
+}
+
+resource "aws_ssm_parameter" "expense_env" {
+  name        = "/${var.project_prefix}/expense-env"
+  description = "expense-forecasting production .env"
+  type        = "SecureString"
+  value       = local.expense_env_file
+  tier        = "Advanced"
+
+  tags = { Name = "${var.project_prefix}-expense-env" }
+}

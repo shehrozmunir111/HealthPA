@@ -12,15 +12,20 @@ git_repo_url = "https://github.com/you/HealthPA.git" # private? use https://<TOK
 git_branch   = "main"
 domain_name  = "" # e.g. "api.healthpa.dev" for auto-HTTPS; leave empty for http://<ip>
 
+# Second app co-hosted on the same instance (served on port 8080)
+expense_git_repo_url = "https://github.com/you/expense-forecasting.git"
+expense_git_branch   = "main"
+
 # Database
 db_password = "change-me-strong-password"
 
 # App secrets (mirror your .env)
 app_secret_key   = "run: python -c \"import secrets; print(secrets.token_hex(32))\""
-groq_api_key     = ""
-openai_api_key   = ""
-pinecone_api_key = ""
-tavily_api_key   = ""
+groq_api_key      = ""
+openai_api_key    = ""
+pinecone_api_key  = ""
+tavily_api_key    = ""
+anthropic_api_key = "" # optional — expense-forecasting LLM (if provider=anthropic)
 
 # Email (SES identity must be verified first)
 ses_sender_email = "noreply@yourdomain.com"

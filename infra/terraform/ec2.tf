@@ -38,6 +38,14 @@ resource "aws_instance" "app" {
     git_repo_url   = var.git_repo_url
     git_branch     = var.git_branch
     ssm_env_name   = aws_ssm_parameter.env.name
+    # Second app + DB bootstrap
+    expense_git_repo_url = var.expense_git_repo_url
+    expense_git_branch   = var.expense_git_branch
+    expense_ssm_env_name = aws_ssm_parameter.expense_env.name
+    db_host              = aws_db_instance.main.address
+    db_user              = var.db_username
+    db_pass              = var.db_password
+    db_name              = var.db_name
   })
 
   # Re-run user_data if the bootstrap script changes (forces replace).

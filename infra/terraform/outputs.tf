@@ -4,8 +4,13 @@ output "app_public_ip" {
 }
 
 output "app_url" {
-  description = "Where the app is reachable."
+  description = "Where HealthPA is reachable."
   value       = var.domain_name != "" ? "https://${var.domain_name}" : "http://${aws_eip.app.public_ip}"
+}
+
+output "expense_url" {
+  description = "Where expense-forecasting is reachable (second app, port 8080)."
+  value       = "http://${aws_eip.app.public_ip}:8080"
 }
 
 output "ssh_command" {

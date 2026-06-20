@@ -40,9 +40,9 @@ variable "ec2_key_name" {
 }
 
 variable "root_volume_gb" {
-  description = "Root EBS size. Free tier covers 30 GB gp3 total."
+  description = "Root EBS size. Free tier covers 30 GB gp3 total. Two apps + two image sets need the headroom."
   type        = number
-  default     = 20
+  default     = 30
 }
 
 # ── App config ───────────────────────────────────────────────────────
@@ -54,6 +54,34 @@ variable "git_repo_url" {
 variable "git_branch" {
   type    = string
   default = "main"
+}
+
+# ── Second app: expense-forecasting (co-hosted on the same instance) ──
+variable "expense_git_repo_url" {
+  description = "HTTPS clone URL of the expense-forecasting repo. Private? embed a token."
+  type        = string
+}
+
+variable "expense_git_branch" {
+  type    = string
+  default = "main"
+}
+
+variable "anthropic_api_key" {
+  description = "Optional. Used by expense-forecasting's LLM/chat if you pick the anthropic provider."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "expense_llm_provider" {
+  type    = string
+  default = "openai"
+}
+
+variable "expense_llm_model" {
+  type    = string
+  default = "gpt-4o-mini"
 }
 
 variable "domain_name" {
