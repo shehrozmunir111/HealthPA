@@ -29,6 +29,9 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+    networks:
+      - default
+      - webproxy
     depends_on:
       - api
 
@@ -87,3 +90,10 @@ volumes:
   redis_data:
   caddy_data:
   caddy_config:
+
+# Shared proxy network so this app's Caddy can also reach the expense web
+# container (it serves both apps' HTTPS on :443). Created once on the host:
+#   docker network create webproxy
+networks:
+  webproxy:
+    external: true

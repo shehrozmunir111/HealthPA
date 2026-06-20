@@ -16,3 +16,11 @@ healthpa.3-230-42-191.sslip.io {
 		file_server
 	}
 }
+
+# The expense app runs in a separate stack; this Caddy owns :443, so it also
+# terminates HTTPS for the expense domain and forwards to its web container
+# (reachable over the shared "webproxy" network). Free Let's Encrypt cert too.
+expense.3-230-42-191.sslip.io {
+	encode gzip
+	reverse_proxy expense-web:80
+}
