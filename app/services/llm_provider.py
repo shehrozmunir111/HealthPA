@@ -31,6 +31,16 @@ def get_chat_model(streaming: bool = False, temperature: Optional[float] = None)
     provider = (settings.CHAT_LLM_PROVIDER or "openai").lower()
     temp = settings.CHAT_LLM_TEMPERATURE if temperature is None else temperature
 
+    if provider in ("claude_cli", "claude-cli", "claudecli"):
+        from app.services.claude_cli_model import ChatClaudeCLI
+
+        return ChatClaudeCLI(
+            model=settings.CLAUDE_CLI_MODEL,
+            command=settings.CLAUDE_CLI_COMMAND,
+            disable_thinking=settings.CLAUDE_CLI_DISABLE_THINKING,
+            timeout=settings.CHAT_LLM_TIMEOUT,
+        )
+
     if provider in ("openai", "lmstudio", "lm_studio"):
         from langchain_openai import ChatOpenAI
 

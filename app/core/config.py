@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     CHAT_MAX_TOKENS: int = 1024
     CHAT_LLM_TIMEOUT: int = 60
 
+    # claude_cli provider: use the local Claude Code CLI as the LLM (no API key,
+    # no cost). Works only where `claude` is installed + logged in (local machine,
+    # NOT the AWS server). Set CHAT_LLM_PROVIDER=claude_cli to enable.
+    CLAUDE_CLI_COMMAND: str = "claude"
+    CLAUDE_CLI_MODEL: str = "haiku"
+    CLAUDE_CLI_DISABLE_THINKING: bool = True
+
     # Embeddings provider.
     #   openai/lmstudio -> nomic via LM Studio (real semantic, 768-dim)
     #   local           -> deterministic hashing embeddings (offline / tests)
