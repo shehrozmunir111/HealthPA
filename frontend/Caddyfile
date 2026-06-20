@@ -1,6 +1,6 @@
-# If DOMAIN is set, Caddy auto-issues a Let's Encrypt cert for it (HTTPS).
-# If DOMAIN is empty, it falls back to serving plain HTTP on :80.
-{$DOMAIN::80} {
+# Serves the built site and proxies /api to the backend. Plain HTTP on :80.
+# For a real domain with automatic HTTPS, change :80 to your domain name.
+:80 {
 	encode gzip
 
 	# API traffic goes to the FastAPI container (same origin, no CORS headaches).
