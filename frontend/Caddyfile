@@ -1,0 +1,17 @@
+# If DOMAIN is set, Caddy auto-issues a Let's Encrypt cert for it (HTTPS).
+# If DOMAIN is empty, it falls back to serving plain HTTP on :80.
+{$DOMAIN::80} {
+	encode gzip
+
+	# API traffic goes to the FastAPI container (same origin, no CORS headaches).
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	# Everything else is the single-page app.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

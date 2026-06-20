@@ -64,3 +64,18 @@ reset_db.py
 seed_data.py
 commit_message.txt
 logs/
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+# Note: .terraform.lock.hcl is intentionally committed (reproducible provider versions)

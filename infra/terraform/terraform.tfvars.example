@@ -1,0 +1,34 @@
+# Copy this to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored — never commit real secrets.
+
+aws_region = "us-east-1"
+
+# Networking / access
+ssh_allowed_cidr = "203.0.113.4/32" # YOUR ip: run `curl ifconfig.me` then append /32
+ec2_key_name     = "healthpa-key"   # an EC2 key pair you created beforehand
+
+# App source
+git_repo_url = "https://github.com/you/HealthPA.git" # private? use https://<TOKEN>@github.com/you/HealthPA.git
+git_branch   = "main"
+domain_name  = "" # e.g. "api.healthpa.dev" for auto-HTTPS; leave empty for http://<ip>
+
+# Database
+db_password = "change-me-strong-password"
+
+# App secrets (mirror your .env)
+app_secret_key   = "run: python -c \"import secrets; print(secrets.token_hex(32))\""
+groq_api_key     = ""
+openai_api_key   = ""
+pinecone_api_key = ""
+tavily_api_key   = ""
+
+# Email (SES identity must be verified first)
+ses_sender_email = "noreply@yourdomain.com"
+admin_email      = "admin@yourdomain.com"
+
+# AI knobs (optional — sensible free defaults already set in variables.tf)
+# chat_llm_provider  = "groq"
+# chat_llm_model     = "llama-3.3-70b-versatile"
+# embedding_provider = "openai"
+# embedding_model    = "text-embedding-3-small"
+# embedding_dim      = 1536

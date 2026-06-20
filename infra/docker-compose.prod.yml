@@ -1,0 +1,84 @@
+# Production stack for a single EC2 host.
+# Differences from the dev docker-compose.yml:
+#   - No `db` service — Postgres is managed by AWS RDS (DATABASE_URL in .env).
+#   - All config comes from .env (fetched from SSM at boot), no inline secrets.
+#   - A `web` service (Caddy) serves the built frontend and reverse-proxies /api,
+#     giving you a single origin + automatic HTTPS when DOMAIN is set.
+#   - No --reload; DEBUG=False.
+#
+# Run from the repo root:  docker compose -f infra/docker-compose.prod.yml up -d --build
+
+services:
+  web:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: healthpa-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Empty DOMAIN => Caddy serves plain HTTP on :80. A real domain => auto-HTTPS.
+      - DOMAIN=${DOMAIN:-}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: healthpa-api
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    expose:
+      - "8000"
+    volumes:
+      - ./data/ocr_uploads:/app/data/ocr_uploads
+      - ./data/rag_state:/app/data/rag_state
+      - ./data/policies:/app/data/policies
+    depends_on:
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  celery_worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: healthpa-celery
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    volumes:
+      - ./data/ocr_uploads:/app/data/ocr_uploads
+    depends_on:
+      - redis
+    command: celery -A app.core.celery_app worker --loglevel=info
+
+  celery_beat:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: healthpa-celery-beat
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    depends_on:
+      - redis
+    command: celery -A app.core.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+
+  redis:
+    image: redis:7-alpine
+    container_name: healthpa-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
+  caddy_data:
+  caddy_config:
