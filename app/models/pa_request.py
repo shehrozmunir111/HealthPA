@@ -30,7 +30,7 @@ class PARequestStatus(str, PyEnum):
         DRAFT -> PENDING, CANCELLED
         PENDING -> APPROVED, DENIED, NEEDS_INFO, CANCELLED
         NEEDS_INFO -> PENDING, CANCELLED
-        APPROVED -> COMPLETED, CANCELLED
+        APPROVED -> COMPLETED, CANCELLED, DENIED
         DENIED -> APPEALED, CANCELLED
         APPEALED -> PENDING, DENIED, CANCELLED
         COMPLETED -> (terminal state)
@@ -74,6 +74,9 @@ class FSMValidator:
         PARequestStatus.APPROVED: {
             PARequestStatus.COMPLETED,
             PARequestStatus.CANCELLED,
+            # Allow a reviewer to deny a previously-approved case (e.g. after a
+            # re-extraction whose proposed codes are rejected).
+            PARequestStatus.DENIED,
         },
         PARequestStatus.DENIED: {
             PARequestStatus.APPEALED,

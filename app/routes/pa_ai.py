@@ -141,6 +141,21 @@ async def review_codes(
                 pa.id,
                 pa.status,
             )
+    elif body.decision == "reject":
+        # Rejecting the proposed codes denies the case. Guarded by the FSM
+        # (legal from PENDING and APPROVED); other states keep their status.
+        try:
+            pa.transition_to(
+                PARequestStatus.DENIED,
+                user_id=str(user.id),
+                notes="AI-proposed codes rejected by reviewer",
+            )
+        except FSMTransitionError:
+            logger.info(
+                "PA %s in status %s cannot move to DENIED; status kept",
+                pa.id,
+                pa.status,
+            )
     pa.ai_extracted_codes = {
         "final_codes": final,
         "decision": body.decision,
