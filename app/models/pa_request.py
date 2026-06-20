@@ -1,8 +1,3 @@
-"""
-Prior Authorization Request Model
-Core business entity with FSM (Finite State Machine) support.
-"""
-
 from uuid import uuid4
 from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING, List, Optional
@@ -23,19 +18,7 @@ if TYPE_CHECKING:
 
 
 class PARequestStatus(str, PyEnum):
-    """
-    Finite State Machine states for PA Requests.
-    
-    Valid Transitions:
-        DRAFT -> PENDING, CANCELLED
-        PENDING -> APPROVED, DENIED, NEEDS_INFO, CANCELLED
-        NEEDS_INFO -> PENDING, CANCELLED
-        APPROVED -> COMPLETED, CANCELLED, DENIED
-        DENIED -> APPEALED, CANCELLED, APPROVED
-        APPEALED -> PENDING, DENIED, CANCELLED
-        COMPLETED -> (terminal state)
-        CANCELLED -> (terminal state)
-    """
+    """FSM states for PA Requests."""
     DRAFT = "draft"
     PENDING = "pending"
     NEEDS_INFO = "needs_info"
@@ -52,9 +35,7 @@ class FSMTransitionError(Exception):
 
 
 class FSMValidator:
-    """
-    Validates PA Request state transitions according to business rules.
-    """
+    """Validates PA Request state transitions according to business rules."""
     
     TRANSITIONS: dict[PARequestStatus, set[PARequestStatus]] = {
         PARequestStatus.DRAFT: {
@@ -119,12 +100,7 @@ class FSMValidator:
 
 
 class PARequest(Base):
-    """
-    Prior Authorization Request Model
-    
-    CONSTRAINT: Every PA request belongs to exactly one hospital and one patient.
-    Hospital isolation ensures complete data separation between tenants.
-    """
+    """PA request belonging to exactly one hospital and one patient (tenant-isolated)."""
     
     __tablename__ = "pa_requests"
     
@@ -230,13 +206,7 @@ class PARequest(Base):
     created_by: Mapped[Optional["User"]] = relationship("User", back_populates="pa_requests_created")
     
     def transition_to(self, new_status: PARequestStatus, user_id: Optional[str] = None, notes: Optional[str] = None):
-        """
-        FSM Transition method with validation.
-        Validates state transitions and records history.
-        
-        Raises:
-            FSMTransitionError: If transition is not allowed.
-        """
+        """FSM transition with validation; records history and raises FSMTransitionError if invalid."""
         # Validate transition using FSMValidator
         FSMValidator.validate(self.status, new_status)
         

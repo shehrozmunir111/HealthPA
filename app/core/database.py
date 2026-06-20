@@ -1,8 +1,3 @@
-"""
-Database Configuration & Session Management
-Async SQLAlchemy with connection pooling optimized for health data.
-"""
-
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
@@ -38,10 +33,7 @@ Base = declarative_base()
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency for getting async database sessions.
-    Handles session lifecycle automatically.
-    """
+    """Dependency for getting async database sessions."""
     async with AsyncSessionLocal() as session:
         try:
             yield session

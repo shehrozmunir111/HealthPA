@@ -1,13 +1,3 @@
-"""ReAct coding-assistant agent for free-text policy/coding Q&A (``/ask``).
-
-Tools: ``search_policies`` (tenant-scoped RAG over the policy corpus),
-``get_pa_case`` / ``get_extracted_codes`` (injected per request by the route so
-the agent stays DB-agnostic), and an optional Tavily ``web_search`` (enabled via
-``ENABLE_WEB_SEARCH``; web results are clearly non-authoritative and never feed
-code grounding). Falls back to a direct grounded RAG answer when no LLM is
-available, so the endpoint never hard-fails.
-"""
-
 import logging
 from typing import Callable, List, Optional
 
@@ -17,9 +7,7 @@ from app.services.rag_service import rag_service
 
 logger = logging.getLogger("healthpa.ai.agent")
 
-# Shared in-process conversational memory for the QA agent, keyed by
-# conversation_id. Built once so multi-turn /ask actually retains history
-# (a fresh saver per call would lose it).
+# Shared in-process conversational memory for the QA agent, keyed by conversation_id.
 _agent_checkpointer = None
 
 

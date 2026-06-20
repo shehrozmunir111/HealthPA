@@ -1,8 +1,3 @@
-"""
-Redis Caching Service for HealthPA
-Provides caching layer for frequently accessed data
-"""
-
 import json
 import logging
 from typing import Optional, Any, Callable, TypeVar
@@ -19,10 +14,7 @@ T = TypeVar('T')
 
 
 class CacheService:
-    """
-    Redis-based caching service.
-    Provides simple get/set operations and decorator-based caching.
-    """
+    """Redis-based caching service with get/set and decorator caching."""
     
     def __init__(self):
         self._redis: Optional[redis.Redis] = None
@@ -128,14 +120,7 @@ def cached(
     ttl_seconds: int = 300,
     hospital_dependent: bool = False
 ):
-    """
-    Decorator for caching function results.
-    
-    Args:
-        key_prefix: Cache key prefix
-        ttl_seconds: Time to live in seconds (default 5 minutes)
-        hospital_dependent: If True, includes hospital_id in cache key
-    """
+    """Decorator for caching function results."""
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
         async def wrapper(*args, **kwargs) -> T:

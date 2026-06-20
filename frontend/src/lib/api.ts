@@ -123,8 +123,7 @@ export async function getCase(id: string): Promise<PaCase> {
   return mapPa(await request<BackendPa>(`/api/pa-requests/${id}`));
 }
 
-// Grounded extraction runs the LangGraph + LLM, which is slow on a local model —
-// allow a long timeout so the request resolves instead of appearing to hang.
+// Long timeout: grounded extraction runs the LangGraph + LLM, slow on a local model.
 export function extract(id: string): Promise<ExtractResult> {
   return request<ExtractResult>(`/api/v1/pa/${id}/extract`, { method: "POST" }, 240000);
 }

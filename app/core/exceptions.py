@@ -1,7 +1,3 @@
-"""
-Core Exceptions & Professional Error Handling
-"""
-
 from typing import Any, Dict, Optional
 from fastapi import HTTPException, status
 

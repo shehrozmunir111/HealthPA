@@ -1,7 +1,3 @@
-"""
-Backward-compatible wrapper for database initialization.
-"""
-
 import asyncio
 
 from manage_db import init_database

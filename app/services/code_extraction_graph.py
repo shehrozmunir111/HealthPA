@@ -1,14 +1,3 @@
-"""HITL grounded-coding graph (LangGraph).
-
-Flow: ``retrieve -> grade -> (rewrite loop) -> extract -> interrupt(review)``.
-Adaptive RAG: if the graded policy is weak, the query is rewritten and retrieval
-retried up to ``CHAT_MAX_REWRITES``. After grounded extraction the graph
-``interrupt()``s with the proposed codes and pauses; a reviewer resumes via
-``Command(resume=ReviewDecision)`` to approve / reject / edit. State is persisted
-by a checkpointer keyed by ``thread_id == PA case id`` — with a Postgres saver
-(durable across restarts) and an in-memory fallback for tests/offline.
-"""
-
 import logging
 from typing import List, Optional
 
@@ -25,9 +14,7 @@ from app.services.rag_service import rag_service
 
 logger = logging.getLogger("healthpa.ai.graph")
 
-# Keep PostgresSaver context managers alive for the process lifetime; otherwise
-# the cm is GC'd after _build_checkpointer returns and its connection closes,
-# breaking durable resume/get_proposed on later requests.
+# Keep PostgresSaver context managers alive for the process lifetime so the connection isn't GC-closed.
 _open_checkpointer_cms = []
 
 
@@ -80,12 +67,10 @@ def _build_checkpointer():
 
 
 class CodeExtractionGraph:
-    """Compiles the extraction graph with a shared checkpointer; bind the LLM
-    per request so tests can inject fakes."""
+    """Compiles the extraction graph with a shared checkpointer; bind the LLM per request so tests can inject fakes."""
 
     def __init__(self, checkpointer=None):
-        # Lazy: don't connect to Postgres at import; build on first use, after
-        # settings (incl. test overrides) are in effect.
+        # Lazy: build on first use (after test overrides), not at import.
         self._checkpointer = checkpointer
 
     def _cp(self):
@@ -172,15 +157,11 @@ class CodeExtractionGraph:
         code_system: Optional[str] = None,
         llm=None,
     ) -> dict:
-        """Run retrieve→grade→extract and pause at review. Returns the proposed
-        codes + interrupt info (``status='pending_review'``)."""
+        """Run retrieve→grade→extract and pause at review, returning proposed codes (``status='pending_review'``)."""
         llm = llm if llm is not None else get_chat_model_safe()
         graph = self._compile(llm)
         config = {"configurable": {"thread_id": str(pa_id)}}
-        # Each "Run extraction" must be a FRESH run. The checkpointer is keyed by
-        # thread_id == pa_id; without clearing it, re-invoking resumes the prior
-        # (already-reviewed/ended) thread and returns stale/empty state
-        # ("0 of 0 codes"). Drop any existing thread so the graph restarts.
+        # Drop any existing thread so each run is fresh; otherwise re-invoking resumes stale state.
         try:
             self._cp().delete_thread(str(pa_id))
         except Exception:

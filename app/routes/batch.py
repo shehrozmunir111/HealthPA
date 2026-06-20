@@ -1,8 +1,3 @@
-"""
-Batch Processing Endpoints for HealthPA
-Supports bulk upload of PA requests via CSV
-"""
-
 import csv
 import io
 import logging
@@ -47,21 +42,7 @@ async def batch_import_pa_requests(
     user: CurrentUser,
     file: UploadFile = File(...)
 ):
-    """
-    Bulk import PA requests from CSV file.
-    
-    CSV Format (required columns):
-        - patient_mrn: Patient Medical Record Number
-        - request_number: Unique request number
-        - diagnosis_codes: JSON array string (e.g., '["J44.0", "R05.9"]')
-        - procedure_codes: JSON array string
-        - clinical_notes: Clinical notes text
-        - payer_name: Insurance payer name
-        - payer_id: Insurance policy number
-        - is_urgent: 'true' or 'false'
-    
-    Returns multi-status response (207) with detailed results.
-    """
+    """Bulk import PA requests from a CSV file; returns a 207 multi-status response with per-row results."""
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Only CSV files are supported")
     
@@ -227,22 +208,7 @@ async def batch_import_patients(
     user: CurrentUser,
     file: UploadFile = File(...)
 ):
-    """
-    Bulk import patients from CSV file.
-    
-    CSV Format (required columns):
-        - mrn: Medical Record Number
-        - first_name: Patient first name
-        - last_name: Patient last name
-        - date_of_birth: Date in YYYY-MM-DD format
-        - phone: Phone number (optional)
-        - email: Email address (optional)
-        - address: Address (optional)
-        - insurance_provider: Insurance provider (optional)
-        - insurance_policy_number: Policy number (optional)
-    
-    Returns multi-status response (207) with detailed results.
-    """
+    """Bulk import patients from a CSV file; returns a 207 multi-status response with per-row results."""
     from datetime import date
     from app.core.sanitization import InputSanitizer
     from app.models.patient import Patient

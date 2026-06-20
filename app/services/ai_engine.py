@@ -1,8 +1,3 @@
-"""
-AI Engine Service for clinical code extraction
-Using Groq API (Llama 3.1)
-"""
-
 import json
 import logging
 from typing import List, Dict, Optional
@@ -17,10 +12,7 @@ logger = logging.getLogger("healthpa.ai")
 
 
 class ClinicalCodeExtractor:
-    """
-    Extracts ICD-10 and CPT codes from clinical notes using Groq API.
-    Uses Llama 3.1 for fast inference.
-    """
+    """Extracts ICD-10 and CPT codes from clinical notes using the Groq API."""
     
     def __init__(self):
         self.client = AsyncOpenAI(
@@ -30,15 +22,7 @@ class ClinicalCodeExtractor:
         self.model = "llama-3.1-8b-instant"
     
     async def extract_codes(self, clinical_notes: str) -> Dict:
-        """
-        Extract ICD-10 and CPT codes from clinical notes.
-        
-        Args:
-            clinical_notes: Raw clinical text from OCR or uploads.
-            
-        Returns:
-            Dict with extracted codes and confidence score.
-        """
+        """Extract ICD-10 and CPT codes from clinical notes."""
         if not settings.GROQ_API_KEY:
             integration_logger.error("Groq API key missing in configuration.")
             return {
@@ -102,9 +86,7 @@ class ClinicalCodeExtractor:
             }
     
     async def analyze_pa_request(self, pa_data: Dict) -> Dict:
-        """
-        Analyze a PA request for completeness using AI.
-        """
+        """Analyze a PA request for completeness using AI."""
         if not settings.GROQ_API_KEY:
             return {"error": "AI provider not configured"}
         
@@ -122,9 +104,7 @@ class ClinicalCodeExtractor:
 
 @shared_task
 def extract_codes_task(clinical_notes: str) -> Dict:
-    """
-    Celery task wrapper for background AI processing.
-    """
+    """Celery task wrapper for background AI processing."""
     import asyncio
     
     extractor = ClinicalCodeExtractor()

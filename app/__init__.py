@@ -1,3 +1,0 @@
-"""
-HealthPA Application Package
-"""

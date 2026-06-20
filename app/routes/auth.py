@@ -1,7 +1,3 @@
-"""
-Authentication Endpoints — with email verification, password reset, and fraud detection.
-"""
-
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
@@ -66,11 +62,7 @@ async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: DbSession,
 ):
-    """
-    Authenticate user.
-    Tracks failed attempts; locks account after FAILED_LOGIN_MAX_ATTEMPTS
-    consecutive failures and fires a fraud-alert email to admin.
-    """
+    """Authenticate user; lock account and alert admin after repeated failures."""
     ip = _client_ip(request)
     security_logger.debug("Login attempt for %s from %s", form_data.username, ip)
 
@@ -152,10 +144,7 @@ async def login(
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_in: UserCreate, db: DbSession):
-    """
-    Register a new staff member.
-    Sends a verification email via Celery (non-blocking).
-    """
+    """Register a new staff member and send a verification email."""
     result = await db.execute(select(User).where(User.email == user_in.email))
     if result.scalar_one_or_none():
         raise ConflictException(f"Email '{user_in.email}' is already registered.")
@@ -197,10 +186,7 @@ async def register(user_in: UserCreate, db: DbSession):
 
 @router.get("/verify-email", status_code=status.HTTP_200_OK)
 async def verify_email(token: str, db: DbSession):
-    """
-    Verify a user's email address using the token from the verification email.
-    The token is one-time-use and expires after 24 hours.
-    """
+    """Verify a user's email using the one-time token (expires after 24 hours)."""
     result = await db.execute(
         select(User).where(User.verification_token == token)
     )
@@ -223,9 +209,7 @@ async def verify_email(token: str, db: DbSession):
 
 @router.post("/resend-verification", status_code=status.HTTP_200_OK)
 async def resend_verification(body: ForgotPasswordRequest, db: DbSession):
-    """
-    Re-send a verification email. Always returns 200 to prevent email enumeration.
-    """
+    """Re-send a verification email. Always returns 200 to prevent email enumeration."""
     result = await db.execute(select(User).where(User.email == body.email))
     user: User | None = result.scalar_one_or_none()
 
@@ -250,9 +234,7 @@ async def resend_verification(body: ForgotPasswordRequest, db: DbSession):
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 async def forgot_password(body: ForgotPasswordRequest, db: DbSession):
-    """
-    Initiate password reset. Always returns 200 to prevent email enumeration.
-    """
+    """Initiate password reset. Always returns 200 to prevent email enumeration."""
     result = await db.execute(select(User).where(User.email == body.email))
     user: User | None = result.scalar_one_or_none()
 
@@ -278,9 +260,7 @@ async def forgot_password(body: ForgotPasswordRequest, db: DbSession):
 
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
 async def reset_password(body: ResetPasswordRequest, db: DbSession):
-    """
-    Complete password reset using the token from the reset email.
-    """
+    """Complete password reset using the token from the reset email."""
     result = await db.execute(
         select(User).where(User.reset_token == body.token)
     )

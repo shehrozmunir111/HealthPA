@@ -1,7 +1,3 @@
-"""
-Unified PostgreSQL database management CLI for HealthPA.
-"""
-
 import argparse
 import asyncio
 from datetime import date, datetime, timezone

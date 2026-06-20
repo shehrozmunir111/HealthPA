@@ -1,8 +1,3 @@
-"""
-Hospital Management Endpoints
-Professional refactored version.
-"""
-
 from typing import List
 from uuid import UUID
 
@@ -27,11 +22,7 @@ admin_required = Depends(RoleChecker([UserRole.ADMIN]))
 
 @router.get("/public", response_model=List[HospitalPublic])
 async def list_hospitals_public(db: DbSession, page: Pagination):
-    """
-    Minimal, UNAUTHENTICATED hospital list for the registration page
-    (a new user must pick their hospital before they have a token).
-    Declared before '/{hospital_id}' so the static path wins.
-    """
+    """Unauthenticated hospital list for the registration page."""
     result = await db.execute(
         select(Hospital).where(Hospital.is_active.is_(True)).offset(page.skip).limit(page.limit)
     )
@@ -44,9 +35,7 @@ async def list_hospitals(
     user: CurrentUser,
     page: Pagination,
 ):
-    """
-    Retrieve all registered hospitals. Admin-only (full records).
-    """
+    """Retrieve all registered hospitals. Admin-only (full records)."""
     result = await db.execute(select(Hospital).offset(page.skip).limit(page.limit))
     return result.scalars().all()
 
@@ -57,12 +46,7 @@ async def create_hospital(
     db: DbSession,
     user: CurrentUser
 ):
-    """
-    Onboard a new healthcare facility.
-    
-    PROTECTION: Restricted to administrative staff or superusers in production.
-    CHECK: Ensures facility codes are unique across the ecosystem.
-    """
+    """Onboard a new healthcare facility (admin-only; facility code must be unique)."""
     logger.info(f"User {user.email} onboarding new hospital: {hospital_in.name} ({hospital_in.code})")
     
     # Uniqueness check for facility code
@@ -84,9 +68,7 @@ async def get_hospital(
     db: DbSession,
     user: CurrentUser
 ):
-    """
-    Fetch facility details by unique identifier.
-    """
+    """Fetch facility details by unique identifier."""
     result = await db.execute(select(Hospital).where(Hospital.id == hospital_id))
     hospital = result.scalar_one_or_none()
     
@@ -103,9 +85,7 @@ async def update_hospital(
     db: DbSession,
     user: CurrentUser
 ):
-    """
-    Update healthcare facility metadata.
-    """
+    """Update healthcare facility metadata."""
     result = await db.execute(select(Hospital).where(Hospital.id == hospital_id))
     hospital = result.scalar_one_or_none()
     

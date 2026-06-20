@@ -1,5 +1,3 @@
-"""Pydantic schemas for Appointment endpoints."""
-
 from datetime import datetime
 from typing import Optional
 from uuid import UUID

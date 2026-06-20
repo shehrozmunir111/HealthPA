@@ -1,8 +1,3 @@
-"""
-Input Sanitization Utilities for HealthPA
-Provides security-focused input validation and sanitization.
-"""
-
 import re
 from typing import Any
 from html import escape
@@ -14,10 +9,7 @@ class SanitizationError(Exception):
 
 
 class InputSanitizer:
-    """
-    Security-focused input sanitization utilities.
-    Prevents XSS, SQL injection, and other injection attacks.
-    """
+    """Security-focused input sanitization (XSS, SQL injection, etc.)."""
     
     # Dangerous patterns
     HTML_PATTERN = re.compile(r'<[^>]+>')
@@ -36,14 +28,7 @@ class InputSanitizer:
     
     @classmethod
     def sanitize_string(cls, value: str, max_length: int = 1000) -> str:
-        """
-        Sanitize a string input.
-        
-        - Removes/escapes HTML tags
-        - Trims whitespace
-        - Enforces max length
-        - Escapes special characters
-        """
+        """Sanitize a string input (strip HTML, trim, escape, enforce max length)."""
         if not isinstance(value, str):
             return str(value)
         
@@ -87,10 +72,7 @@ class InputSanitizer:
     
     @classmethod
     def sanitize_clinical_notes(cls, notes: str, max_length: int = 10000) -> str:
-        """
-        Sanitize clinical notes specifically.
-        Allows more characters but prevents injection.
-        """
+        """Sanitize clinical notes, allowing medical characters but preventing injection."""
         if not isinstance(notes, str):
             return str(notes)
         
@@ -103,8 +85,7 @@ class InputSanitizer:
         # Remove script tags only (keep medical symbols)
         notes = cls.SCRIPT_PATTERN.sub('', notes)
         
-        # Allow alphanumeric, common punctuation, and medical characters
-        # This preserves ICD/CPT codes and medical terminology
+        # Allow alphanumeric, punctuation, and medical characters (preserves ICD/CPT codes).
         allowed_pattern = re.compile(r'[^a-zA-Z0-9\s\-.,;:\'\"()+\/\\[\]{}|@#$%^&=<>!?`~\d:.%-]')
         notes = allowed_pattern.sub('', notes)
         
@@ -116,10 +97,7 @@ class InputSanitizer:
     
     @classmethod
     def sanitize_filename(cls, filename: str) -> str:
-        """
-        Sanitize uploaded filename.
-        Prevents path traversal and dangerous extensions.
-        """
+        """Sanitize uploaded filename (prevents path traversal and dangerous chars)."""
         if not filename:
             return "unnamed"
         
@@ -142,10 +120,7 @@ class InputSanitizer:
     
     @classmethod
     def check_sql_injection(cls, value: str) -> bool:
-        """
-        Check if value contains SQL injection patterns.
-        Returns True if suspicious patterns found.
-        """
+        """Check if value contains SQL injection patterns (True if suspicious)."""
         if not isinstance(value, str):
             return False
         
@@ -176,10 +151,7 @@ class InputSanitizer:
 
 
 def sanitize_response(data: Any) -> Any:
-    """
-    Sanitize API response data.
-    Used to prevent XSS in API responses.
-    """
+    """Sanitize API response data to prevent XSS."""
     if isinstance(data, str):
         return escape(data)
     elif isinstance(data, dict):

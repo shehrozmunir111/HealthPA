@@ -1,8 +1,3 @@
-"""
-Patients API Endpoints
-Professional refactored version with strict isolation and modern dependencies.
-"""
-
 from typing import List
 from uuid import UUID
 
@@ -28,13 +23,7 @@ async def list_patients(
     user: CurrentUser,
     page: Pagination
 ):
-    """
-    List all patients for the current hospital.
-    
-    ISOLATION: Strict hospital filtering enforced by HospitalCtx.
-    AUDIT: Records the bulk access event.
-    CACHING: Patient lists are cached for 5 minutes.
-    """
+    """List all patients for the current hospital (isolated, audited, cached 5 min)."""
     logger.debug(f"User {user.email} listing patients for hospital {hospital_ctx.hospital_id}")
     
     cache_key = f"{CacheKeys.hospital_patients(str(hospital_ctx.hospital_id))}:page:{page.skip}:{page.limit}"
@@ -74,11 +63,7 @@ async def create_patient(
     hospital_ctx: HospitalCtx,
     user: CurrentUser
 ):
-    """
-    Register a new patient.
-    
-    ISOLATION: Automatic hospital assignment from authenticated context.
-    """
+    """Register a new patient (hospital assigned from authenticated context)."""
     logger.info(f"User {user.email} creating patient: {patient_in.first_name} {patient_in.last_name}")
     
     patient = Patient(
@@ -100,12 +85,7 @@ async def get_patient(
     hospital_ctx: HospitalCtx,
     user: CurrentUser
 ):
-    """
-    Fetch a single patient record.
-    
-    ISOLATION: Ownership verification against current hospital context.
-    EXCEPTION: Custom PatientNotFoundException for consistent error reporting.
-    """
+    """Fetch a single patient record (ownership verified against hospital context)."""
     result = await db.execute(
         select(Patient).where(Patient.id == patient_id)
     )
@@ -128,11 +108,7 @@ async def update_patient(
     hospital_ctx: HospitalCtx,
     user: CurrentUser
 ):
-    """
-    Update patient clinical information.
-    
-    ISOLATION: Ownership check mandatory before modification.
-    """
+    """Update patient clinical information (ownership checked before modification)."""
     result = await db.execute(
         select(Patient).where(Patient.id == patient_id)
     )
@@ -160,11 +136,7 @@ async def delete_patient(
     hospital_ctx: HospitalCtx,
     user: CurrentUser
 ):
-    """
-    Remove patient record from the system.
-    
-    ISOLATION: Ownership check mandatory before deletion.
-    """
+    """Remove patient record from the system (ownership checked before deletion)."""
     result = await db.execute(
         select(Patient).where(Patient.id == patient_id)
     )

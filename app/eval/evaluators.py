@@ -1,11 +1,3 @@
-"""Evaluators for the grounded-coding layer.
-
-Deterministic metrics (no LLM): code-extraction precision/recall/F1 vs a gold
-set, and retrieval recall@k. LLM-as-judge (optional): citation faithfulness —
-"is every emitted code supported by the cited policy context?". All judge calls
-degrade to ``None`` when no judge model is supplied, so the harness runs offline.
-"""
-
 import logging
 from typing import Callable, Dict, List, Optional
 
@@ -82,11 +74,7 @@ def run_evaluation(
     answer_fn: Callable[[dict], dict],
     judge_llm=None,
 ) -> dict:
-    """Evaluate ``answer_fn`` over ``dataset``.
-
-    ``answer_fn(case)`` must return ``{"codes": [...], "retrieved": [Document...],
-    "context": str}``. Each case provides ``gold_codes`` and ``retrieval_terms``.
-    """
+    """Evaluate ``answer_fn`` over ``dataset``."""
     items = []
     for case in dataset:
         out = answer_fn(case)

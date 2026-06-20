@@ -1,12 +1,3 @@
-"""Live end-to-end verification of the AI grounded-coding layer.
-
-Exercises the REAL stack from .env: LM Studio (chat + nomic embeddings),
-Pinecone (vector store), the HITL LangGraph, the ReAct policy-QA agent, and
-RAGAS — no test fakes. Run from the project root:
-
-    python -m scripts.verify_live
-"""
-
 import os
 import sys
 
@@ -91,10 +82,7 @@ def main():
         from app.services.grounded_extractor import extract_codes
         from app.services.llm_provider import get_chat_model_safe
 
-        # RAGAS issues long multi-call prompts; give the local model a much larger
-        # HTTP request timeout (so calls aren't cut at CHAT_LLM_TIMEOUT=120s) and
-        # more output headroom (faithfulness/context_recall emit long lists and
-        # otherwise hit LLMDidNotFinishException at CHAT_MAX_TOKENS=1024).
+        # RAGAS issues long multi-call prompts; raise timeout and token headroom for the local model.
         settings.CHAT_LLM_TIMEOUT = 600
         settings.CHAT_MAX_TOKENS = 4096
         judge = get_chat_model_safe()

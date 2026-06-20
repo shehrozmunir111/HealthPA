@@ -1,14 +1,3 @@
-"""A LangChain chat model that shells out to the local Claude Code CLI (`claude -p`).
-
-No API key, no cost: it reuses your existing logged-in Claude Code session. This is
-the same trick used in the career-agent project, wrapped as a LangChain
-``BaseChatModel`` so it drops into the existing LCEL/LangGraph pipelines.
-
-IMPORTANT: this only works where the `claude` CLI is installed and authenticated —
-i.e. your local machine. It will NOT work on a headless server (e.g. the AWS EC2
-host), so keep a cloud provider (groq/anthropic/openai) configured there. Text-only:
-it does not support native tool-calling / structured output.
-"""
 import os
 import shutil
 import subprocess
@@ -51,8 +40,7 @@ class ChatClaudeCLI(BaseChatModel):
 
     def _call_cli(self, prompt: str) -> str:
         exe = shutil.which(self.command) or self.command
-        # --strict-mcp-config (no --mcp-config) skips MCP servers; a small model
-        # + MAX_THINKING_TOKENS=0 keep each call fast.
+        # --strict-mcp-config skips MCP servers; small model + MAX_THINKING_TOKENS=0 keep calls fast.
         args = [exe, "-p", "--output-format", "text", "--strict-mcp-config"]
         if self.model:
             args += ["--model", self.model]

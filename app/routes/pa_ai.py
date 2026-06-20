@@ -1,17 +1,3 @@
-"""AI grounded-coding endpoints (JWT + hospital_id scoped).
-
-POST /api/v1/pa/{id}/extract        -> RAG+rerank+grounded extract; pause for review
-GET  /api/v1/pa/{id}/proposed-codes -> proposed codes + citations (from checkpoint)
-POST /api/v1/pa/{id}/review         -> resume graph; finalize codes
-POST /api/v1/pa/{id}/ask            -> coder policy-QA (ReAct/RAG)
-POST /api/v1/policies/reindex       -> rebuild the hospital's persistent index
-
-Every endpoint is tenant-scoped (the PA must belong to the caller's hospital;
-retrieval/memory are namespaced by hospital_id). The synchronous AI services run
-in a threadpool. AI events are audit-logged ("ai_codes_proposed",
-"codes_reviewed" with before/after).
-"""
-
 import json
 import logging
 import os
@@ -119,16 +105,14 @@ async def review_codes(
     final = result.get("final_codes", [])
 
     if body.decision in ("approve", "edit"):
-        # The reviewed set is authoritative — assign unconditionally so an edit
-        # that *removes* codes actually clears the column (don't keep stale codes).
+        # Reviewed set is authoritative; assign unconditionally so edits can clear codes.
         pa.diagnosis_codes = [
             code.get("code") for code in final if code.get("code_system") == "ICD10"
         ]
         pa.procedure_codes = [
             code.get("code") for code in final if code.get("code_system") == "CPT"
         ]
-        # Advance the PA's workflow status so the case leaves the review queue.
-        # Guarded by the FSM — only legal from PENDING; other states keep status.
+        # Advance status out of the review queue (FSM-guarded; only legal from PENDING).
         try:
             pa.transition_to(
                 PARequestStatus.APPROVED,
@@ -142,8 +126,7 @@ async def review_codes(
                 pa.status,
             )
     elif body.decision == "reject":
-        # Rejecting the proposed codes denies the case. Guarded by the FSM
-        # (legal from PENDING and APPROVED); other states keep their status.
+        # Rejecting denies the case (FSM-guarded; legal from PENDING and APPROVED).
         try:
             pa.transition_to(
                 PARequestStatus.DENIED,
@@ -233,10 +216,7 @@ async def ask(
 async def reindex_policies(
     body: ReindexRequest, db: DbSession, user: CurrentUser, hospital_ctx: HospitalCtx
 ):
-    """Rebuild the hospital's persistent policy index from its docs directory.
-
-    Cached (no re-embed) unless the corpus changed or ``force`` is set.
-    """
+    """Rebuild the hospital's persistent policy index (cached unless changed or forced)."""
     corpus_dir = os.path.join(settings.POLICY_DOCS_DIR, str(hospital_ctx.hospital_id))
     items = []
     if os.path.isdir(corpus_dir):

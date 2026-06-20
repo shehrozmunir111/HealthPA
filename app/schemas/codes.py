@@ -1,10 +1,3 @@
-"""Pydantic schemas for the grounded-coding AI layer.
-
-Used for LLM structured output (extraction, grading, judging) and for the
-HITL review API. Codes carry citations back to the policy chunk that grounds
-them, so a reviewer (and the output guard) can verify evidence.
-"""
-
 from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field

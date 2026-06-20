@@ -1,8 +1,3 @@
-"""
-HealthPA - AI-Powered Prior Authorization System
-Main FastAPI Application Entry Point
-"""
-
 import logging
 from contextlib import asynccontextmanager
 
@@ -25,10 +20,7 @@ logger = logging.getLogger("healthpa.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Application lifespan handler.
-    Creates tables on startup (dev only - use Alembic in production).
-    """
+    """Application lifespan handler; creates tables on startup (dev only)."""
     # Startup
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION}...")
     
@@ -60,9 +52,7 @@ app = FastAPI(
 
 @app.exception_handler(HealthPAException)
 async def health_pa_exception_handler(request: Request, exc: HealthPAException):
-    """
-    Standardize clinical domain error responses.
-    """
+    """Standardize clinical domain error responses."""
     logger.error(f"DOMAIN_ERROR: {exc.detail} | REQ_ID: {getattr(request.state, 'id', 'N/A')}")
     return JSONResponse(
         status_code=exc.status_code,

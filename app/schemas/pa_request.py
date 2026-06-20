@@ -1,7 +1,3 @@
-"""
-PA Request Pydantic Schemas
-"""
-
 from datetime import date, datetime
 from typing import Optional, List
 from uuid import UUID

@@ -1,8 +1,3 @@
-"""
-Webhook Service for HealthPA
-Sends notifications to external systems on PA status changes
-"""
-
 import json
 import logging
 from typing import Optional, Dict, Any, List
@@ -67,10 +62,7 @@ class WebhookPayload:
 
 
 class WebhookService:
-    """
-    Service for sending webhook notifications.
-    Supports async delivery with retry logic.
-    """
+    """Service for sending webhook notifications with async delivery and retry."""
     
     def __init__(self):
         self.webhook_urls: List[str] = self._get_webhook_urls()
@@ -88,10 +80,7 @@ class WebhookService:
         return len(self.webhook_urls) > 0
     
     def send_async(self, payload: WebhookPayload) -> None:
-        """
-        Send webhook asynchronously in a background thread.
-        Does not block the main request.
-        """
+        """Send webhook asynchronously in a background thread (non-blocking)."""
         if not self.is_enabled():
             return
         

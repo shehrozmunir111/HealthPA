@@ -1,8 +1,3 @@
-"""
-Password Utilities
-Separated to avoid circular imports with models.
-"""
-
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(

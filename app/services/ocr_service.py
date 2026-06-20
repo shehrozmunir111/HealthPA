@@ -1,8 +1,3 @@
-"""
-OCR Service for extracting text from medical documents
-Supports both images and PDFs using PyTesseract and pdf2image
-"""
-
 import os
 import uuid
 import logging
@@ -38,17 +33,7 @@ def _get_pytesseract():
 
 @shared_task(bind=True, max_retries=3)
 def process_ocr(self, file_path: str, file_name: str) -> dict:
-    """
-    Celery task to process OCR on uploaded documents.
-    Supports images (PNG, JPG, TIFF, BMP) and PDFs.
-    
-    Args:
-        file_path: Path to the uploaded file
-        file_name: Original file name
-        
-    Returns:
-        dict with extracted_text, confidence, and metadata
-    """
+    """Celery task to run OCR on uploaded images (PNG, JPG, TIFF, BMP) and PDFs."""
     try:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
@@ -102,9 +87,7 @@ def _process_image(image_path: str) -> dict:
 
 
 def _process_pdf(pdf_path: str) -> dict:
-    """
-    Process a PDF file by converting each page to an image and applying OCR.
-    """
+    """Process a PDF by converting each page to an image and applying OCR."""
     pytesseract = _get_pytesseract()
     if not PDF2IMAGE_AVAILABLE:
         raise ImportError(
@@ -142,15 +125,7 @@ def _process_pdf(pdf_path: str) -> dict:
 
 
 def save_upload_file(upload_file) -> str:
-    """
-    Save uploaded file to disk and return path.
-    
-    Args:
-        upload_file: FastAPI UploadFile object
-        
-    Returns:
-        str: Path to saved file
-    """
+    """Save a FastAPI UploadFile to disk and return its path."""
     file_ext = Path(upload_file.filename).suffix
     unique_name = f"{uuid.uuid4()}{file_ext}"
     

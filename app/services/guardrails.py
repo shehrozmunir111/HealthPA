@@ -1,12 +1,3 @@
-"""Input/output guardrails for the AI layer.
-
-Input guard (for the coder-facing ``/ask`` query path): blocks prompt-injection
-attempts and over-long input; soft-flags possible PHI (does not block — clinical
-context legitimately contains PHI). Output guard enforces **grounding**: every
-emitted code must appear in the retrieved policy context and carry a citation,
-otherwise it is flagged ("no code without policy evidence").
-"""
-
 import re
 from dataclasses import dataclass, field
 from typing import List, Tuple
@@ -75,14 +66,7 @@ def _normalize(text: str) -> str:
 
 
 def code_is_grounded(code: ProposedCode, context: str) -> bool:
-    """A code is grounded if it carries a citation AND its code string appears
-    in the retrieved policy context as a whole token.
-
-    Uses boundary lookarounds (not a bare substring) so e.g. "71046" is not
-    matched inside "710462" and "E11" is not matched inside "E119" — a leading
-    word char / dot or a trailing word char rejects the match, while ordinary
-    trailing punctuation (". ;") is allowed.
-    """
+    """Grounded if the code carries a citation and appears as a whole token in the policy context."""
     if not code.citations:
         return False
     pattern = re.compile(rf"(?<![\w.]){re.escape(_normalize(code.code))}(?!\w)")
@@ -92,11 +76,7 @@ def code_is_grounded(code: ProposedCode, context: str) -> bool:
 def check_code_grounding(
     codes: List[ProposedCode], context: str
 ) -> Tuple[List[ProposedCode], List[ProposedCode]]:
-    """Partition codes into (grounded, flagged) and stamp ``code.grounded``.
-
-    A code is grounded only when it cites policy and its code string is present
-    in that policy context.
-    """
+    """Partition codes into (grounded, flagged) and stamp ``code.grounded``."""
     grounded: List[ProposedCode] = []
     flagged: List[ProposedCode] = []
     for code in codes:
@@ -107,8 +87,7 @@ def check_code_grounding(
 
 
 def check_output_text(answer: str, context: str) -> OutputGuard:
-    """Grounding guard for free-text answers (``/ask``): flag any code-like token
-    in the answer that is absent from the supporting context."""
+    """Flag any code-like token in a free-text answer that is absent from the supporting context."""
     code_re = re.compile(r"\b[A-TV-Z]\d{2}(?:\.\d{1,4})?\b|\b\d{5}\b")
     ctx = _normalize(context)
     ungrounded = []

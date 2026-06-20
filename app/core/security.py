@@ -1,8 +1,3 @@
-"""
-Security, Authentication & Multi-tenancy Isolation
-CRITICAL: hospital_id isolation is enforced at the dependency level
-"""
-
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Annotated
 from uuid import UUID
@@ -33,10 +28,7 @@ async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: AsyncSession = Depends(get_db)
 ) -> User:
-    """
-    Validate JWT token and return current user.
-    Raises 401 if token is invalid.
-    """
+    """Validate JWT token and return current user (401 if invalid)."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -77,33 +69,17 @@ async def get_current_active_user(
 
 
 class HospitalContext:
-    """
-    Hospital Isolation Context
-    
-    This class encapsulates the hospital_id and provides methods
-    to apply hospital isolation filters to any query.
-    """
+    """Encapsulates hospital_id and applies hospital isolation filters to queries."""
     
     def __init__(self, hospital_id: UUID):
         self.hospital_id = hospital_id
     
     def apply_isolation(self, query, model_class):
-        """
-        Apply hospital_id filter to a SQLAlchemy query.
-        
-        Usage:
-            query = hospital_context.apply_isolation(
-                select(Patient), 
-                Patient
-            )
-        """
+        """Apply hospital_id filter to a SQLAlchemy query."""
         return query.where(model_class.hospital_id == self.hospital_id)
     
     def verify_ownership(self, obj) -> bool:
-        """
-        Verify that an object belongs to this hospital.
-        Raises HTTPException if not.
-        """
+        """Verify an object belongs to this hospital (raises HTTPException if not)."""
         if obj.hospital_id != self.hospital_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -115,10 +91,5 @@ class HospitalContext:
 async def get_hospital_context(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ) -> HospitalContext:
-    """
-    Dependency that provides HospitalContext for the current user.
-    
-    This is the CRITICAL isolation mechanism. Every service/repository
-    that accesses data must use this context to filter by hospital_id.
-    """
+    """Dependency providing the current user's HospitalContext (core isolation mechanism)."""
     return HospitalContext(hospital_id=current_user.hospital_id)

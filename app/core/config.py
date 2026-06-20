@@ -1,8 +1,3 @@
-"""
-Core Configuration & Settings
-$0 Infra Focus - Environment-based configuration
-"""
-
 from functools import lru_cache
 from typing import List
 
@@ -50,15 +45,11 @@ class Settings(BaseSettings):
     # AI/Groq
     GROQ_API_KEY: str = ""
 
-    # ── AI Layer (LangGraph / RAG / HITL) ────────────────────────
-    # Master switch; when False the grounded layer is skipped and the
-    # existing rule/LLM extractor is used (graceful fallback).
+    # AI Layer (LangGraph / RAG / HITL)
+    # Master switch; when False the grounded layer falls back to the rule/LLM extractor.
     AI_ENABLED: bool = True
 
-    # Chat model provider abstraction.
-    #   openai/lmstudio -> OpenAI-compatible client (drives local LM Studio)
-    #   groq            -> Groq cloud
-    #   anthropic       -> Anthropic cloud
+    # Chat provider: openai/lmstudio (OpenAI-compatible), groq, or anthropic.
     CHAT_LLM_PROVIDER: str = "openai"
     CHAT_LLM_MODEL: str = "google/gemma-4-12b-qat"
     LLM_BASE_URL: str = "http://localhost:1234/v1"   # LM Studio; "" for cloud
@@ -68,16 +59,12 @@ class Settings(BaseSettings):
     CHAT_MAX_TOKENS: int = 1024
     CHAT_LLM_TIMEOUT: int = 60
 
-    # claude_cli provider: use the local Claude Code CLI as the LLM (no API key,
-    # no cost). Works only where `claude` is installed + logged in (local machine,
-    # NOT the AWS server). Set CHAT_LLM_PROVIDER=claude_cli to enable.
+    # claude_cli provider: use the local Claude Code CLI as the LLM (set CHAT_LLM_PROVIDER=claude_cli; local only, not AWS).
     CLAUDE_CLI_COMMAND: str = "claude"
     CLAUDE_CLI_MODEL: str = "haiku"
     CLAUDE_CLI_DISABLE_THINKING: bool = True
 
-    # Embeddings provider.
-    #   openai/lmstudio -> nomic via LM Studio (real semantic, 768-dim)
-    #   local           -> deterministic hashing embeddings (offline / tests)
+    # Embeddings provider: openai/lmstudio (nomic, 768-dim) or local (hashing, offline/tests).
     EMBEDDING_PROVIDER: str = "openai"
     EMBEDDING_MODEL: str = "text-embedding-nomic-embed-text-v1.5"
     EMBEDDING_BASE_URL: str = ""                       # falls back to LLM_BASE_URL
@@ -90,12 +77,10 @@ class Settings(BaseSettings):
     PINECONE_CLOUD: str = "aws"
     PINECONE_REGION: str = "us-east-1"
 
-    # Where per-hospital corpus fingerprints are cached (skip re-embed when
-    # the policy corpus is unchanged). One JSON file per hospital.
+    # Per-hospital corpus fingerprint cache (skip re-embed when corpus unchanged).
     RAG_STATE_DIR: str = "data/rag_state"
 
-    # Root dir for policy source documents; the reindex endpoint reads each
-    # hospital's corpus from "{POLICY_DOCS_DIR}/{hospital_id}/".
+    # Root dir for policy source documents, read per-hospital from "{POLICY_DOCS_DIR}/{hospital_id}/".
     POLICY_DOCS_DIR: str = "data/policies"
 
     # Retrieval / RAG tuning
@@ -113,8 +98,7 @@ class Settings(BaseSettings):
     # HITL checkpointer: "postgres" (durable, survives restart) | "memory"
     HITL_CHECKPOINTER: str = "postgres"
 
-    # Web search tool for the policy-QA agent (non-authoritative; kept out of
-    # code grounding)
+    # Web search tool for the policy-QA agent (non-authoritative; not used for code grounding).
     ENABLE_WEB_SEARCH: bool = True
     TAVILY_API_KEY: str = ""
 

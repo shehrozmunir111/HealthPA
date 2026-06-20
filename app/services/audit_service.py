@@ -1,8 +1,3 @@
-"""
-Professional Audit Logging Service
-HIPAA-compliant trail for tracking user actions.
-"""
-
 from typing import Optional, Any, Dict
 from uuid import UUID
 
@@ -26,9 +21,7 @@ class AuditService:
         details: Optional[Dict[str, Any]] = None,
         tags: Optional[list[str]] = None
     ) -> AuditLog:
-        """
-        Record a significant action in the audit trail.
-        """
+        """Record a significant action in the audit trail."""
         audit_entry = AuditLog(
             hospital_id=hospital_id,
             user_id=user_id,

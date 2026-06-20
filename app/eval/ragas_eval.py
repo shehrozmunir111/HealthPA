@@ -1,19 +1,3 @@
-"""RAGAS-based evaluation of grounded coding.
-
-Runs RAGAS metrics — faithfulness, answer relevancy, context precision and
-context recall — over the coding cases, using the project's provider abstraction
-(LM Studio / Groq / cloud) wrapped for RAGAS. RAGAS is LLM-judged, so it requires
-a reachable chat model (and embeddings for answer relevancy); when none is
-available, ``run_ragas`` returns ``{"skipped": ...}`` rather than failing, so the
-offline test/eval paths keep working.
-
-Sample shape (RAGAS single-turn columns):
-    user_input         -> the clinical note / question
-    response           -> the proposed codes rendered as text
-    retrieved_contexts -> list of retrieved policy chunk texts
-    reference          -> the gold codes (ground truth)
-"""
-
 import logging
 from typing import List
 
@@ -52,11 +36,7 @@ def build_ragas_sample(
 
 
 def run_ragas(samples: List[dict], llm=None, embeddings=None, metrics=None) -> dict:
-    """Evaluate ``samples`` with RAGAS. Returns aggregate metric means.
-
-    Returns ``{"skipped": reason}`` when no LLM is configured or RAGAS/its
-    dependencies are unavailable — keeping offline runs non-fatal.
-    """
+    """Evaluate ``samples`` with RAGAS; returns aggregate metric means, or ``{"skipped": ...}`` when unavailable."""
     if llm is None:
         return {"skipped": "no chat model configured for RAGAS"}
     if not samples:
@@ -64,7 +44,6 @@ def run_ragas(samples: List[dict], llm=None, embeddings=None, metrics=None) -> d
 
     try:
         from ragas import EvaluationDataset, evaluate
-        # In newer versions, these are imported from ragas.llms and ragas.embeddings
         from ragas.embeddings import LangchainEmbeddingsWrapper
         from ragas.llms import LangchainLLMWrapper
         from ragas.metrics import (
@@ -81,8 +60,8 @@ def run_ragas(samples: List[dict], llm=None, embeddings=None, metrics=None) -> d
 
     wrapped_llm = LangchainLLMWrapper(llm)
     wrapped_emb = LangchainEmbeddingsWrapper(embeddings or get_embeddings())
-    
-    # CRITICAL: Newer Ragas versions require metric instances bound to the specific LLM/Embeddings wrapper.
+
+    # Newer Ragas requires metric instances bound to the specific LLM/Embeddings wrapper.
     if metrics is None:
         chosen = [
             Faithfulness(llm=wrapped_llm),
@@ -95,12 +74,7 @@ def run_ragas(samples: List[dict], llm=None, embeddings=None, metrics=None) -> d
 
     try:
         dataset = EvaluationDataset.from_list(samples)
-        # Local models (LM Studio) are slow and don't parallelize well; give each
-        # metric job a generous timeout and keep concurrency low so jobs finish
-        # instead of hitting the default 180s budget.
-        # Generous per-job budget: RAGAS's faithfulness metric makes several long
-        # generations and is very slow on a local model. Cloud judges (Groq) finish
-        # in a fraction of this.
+        # Generous timeout, low concurrency: local models are slow and don't parallelize well.
         run_config = RunConfig(timeout=1800, max_workers=1, max_retries=1)
         result = evaluate(
             dataset=dataset,
@@ -114,8 +88,7 @@ def run_ragas(samples: List[dict], llm=None, embeddings=None, metrics=None) -> d
         df = result.to_pandas()
         numeric = df.select_dtypes(include="number")
         
-        # Drop NaN per column before averaging: with raise_exceptions=False,
-        # failed evaluation rows yield NaN instead of a float score.
+        # Drop NaN per column before averaging (failed rows yield NaN with raise_exceptions=False).
         summary = {}
         for col in numeric.columns:
             mean_val = df[col].dropna()

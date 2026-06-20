@@ -1,7 +1,3 @@
-"""
-Custom Middlewares for HealthPA application.
-"""
-
 import time
 import uuid
 from collections import defaultdict
@@ -32,10 +28,7 @@ class RateLimitConfig:
 
 
 class RateLimiter:
-    """
-    Simple in-memory rate limiter using sliding window algorithm.
-    Thread-safe implementation.
-    """
+    """Thread-safe in-memory sliding-window rate limiter."""
     
     def __init__(self):
         self._requests: Dict[str, List[datetime]] = defaultdict(list)
@@ -79,11 +72,7 @@ rate_limiter = RateLimiter()
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """
-    Rate limiting middleware to prevent abuse.
-    Uses IP-based limiting for unauthenticated requests.
-    Uses user-based limiting for authenticated requests.
-    """
+    """Rate limiting middleware (IP-based when anonymous, user-based when authenticated)."""
     
     async def dispatch(self, request: Request, call_next):
         # Skip rate limiting for health checks
@@ -147,10 +136,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 
 class ProcessTimeAndRequestIDMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware that adds a unique Request ID to each request and
-    logs the processing time for performance monitoring.
-    """
+    """Adds a unique Request ID and logs per-request processing time."""
     
     async def dispatch(self, request: Request, call_next):
         # Generate Request ID

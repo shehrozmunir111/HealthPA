@@ -1,16 +1,3 @@
-"""
-Email Tasks — AWS SES via boto3
-All email sending is async (Celery tasks) to never block API responses.
-
-Tasks:
-  send_email                  — generic send, used by all other helpers
-  send_verification_email     — called on user registration
-  send_password_reset_email   — called on forgot-password request
-  send_appointment_reminder   — called per-appointment from the beat task
-  send_fraud_alert            — called when an account is locked
-  send_appointment_reminders  — Celery Beat entry point (runs hourly)
-"""
-
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -24,9 +11,7 @@ from app.core.config import settings
 
 logger = logging.getLogger("healthpa.email")
 
-# ---------------------------------------------------------------------------
 # Sync DB engine — used only inside Celery tasks (no asyncio event loop)
-# ---------------------------------------------------------------------------
 _sync_engine = None
 _SyncSession = None
 
@@ -44,9 +29,7 @@ def _get_sync_session():
     return _SyncSession()
 
 
-# ---------------------------------------------------------------------------
 # HTML email templates
-# ---------------------------------------------------------------------------
 
 def _base_template(title: str, body: str) -> str:
     return f"""<!DOCTYPE html>
@@ -149,9 +132,7 @@ def _fraud_alert_html(
     return _base_template("HealthPA Security Alert — Account Locked", body)
 
 
-# ---------------------------------------------------------------------------
 # Core send task
-# ---------------------------------------------------------------------------
 
 @shared_task(
     bind=True,
@@ -160,10 +141,7 @@ def _fraud_alert_html(
     name="app.tasks.email.send_email",
 )
 def send_email(self, to_email: str, subject: str, html_body: str) -> dict:
-    """
-    Send an HTML email via AWS SES.
-    Retries up to 3 times with 60-second back-off on transient errors.
-    """
+    """Send an HTML email via AWS SES, retrying up to 3 times on transient errors."""
     if not settings.AWS_ACCESS_KEY_ID or not settings.SES_SENDER_EMAIL:
         logger.warning("SES not configured — email to %s skipped", to_email)
         return {"status": "skipped", "reason": "SES not configured"}
@@ -191,9 +169,7 @@ def send_email(self, to_email: str, subject: str, html_body: str) -> dict:
         raise self.retry(exc=exc)
 
 
-# ---------------------------------------------------------------------------
 # High-level helpers (thin wrappers that build HTML and call send_email)
-# ---------------------------------------------------------------------------
 
 @shared_task(name="app.tasks.email.send_verification_email")
 def send_verification_email(to_email: str, full_name: str, token: str) -> None:
@@ -241,18 +217,11 @@ def send_fraud_alert(
     )
 
 
-# ---------------------------------------------------------------------------
 # Celery Beat task — runs every hour, sends 24-hour appointment reminders
-# ---------------------------------------------------------------------------
 
 @shared_task(name="app.tasks.email.send_appointment_reminders")
 def send_appointment_reminders() -> dict:
-    """
-    Scheduled task (Beat, hourly).
-    Finds appointments starting between 23h55m and 24h05m from now,
-    sends a reminder to the patient if they have an email address,
-    and marks reminder_sent=True to prevent duplicates.
-    """
+    """Hourly Beat task: send reminders for appointments ~24h out and mark reminder_sent to avoid duplicates."""
     from app.models.appointment import Appointment, AppointmentStatus
     from app.models.patient import Patient
 

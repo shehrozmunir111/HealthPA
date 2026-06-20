@@ -1,8 +1,3 @@
-"""
-Prior Authorization (PA) Request Endpoints
-Professional refactored version.
-"""
-
 from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID, uuid4
@@ -34,15 +29,7 @@ async def upload_clinical_document(
     user: CurrentUser,
     file: UploadFile = File(...)
 ):
-    """
-    Onboard a clinical document and trigger background OCR processing.
-    
-    ISOLATION: Strict hospital ownership verification.
-    WORKFLOW: 
-    1. Synchronously saves the file to local storage.
-    2. Updates metadata record.
-    3. Queues background OCR task for clinical extraction.
-    """
+    """Save a clinical document (hospital-owned) and queue a background OCR task."""
     logger.info(f"User {user.email} uploading document '{file.filename}' for PA {pa_request_id}")
     
     # 1. Fetch and verify ownership
@@ -74,7 +61,7 @@ async def upload_clinical_document(
         "ocr_result": None
     }
     
-    # SQLAlchemy note: Must create new list to trigger JSONB update detection or use mutable extension
+    # New list needed to trigger JSONB update detection.
     attachments = list(pa_request.attachments or [])
     attachments.append(attachment)
     pa_request.attachments = attachments
@@ -82,7 +69,7 @@ async def upload_clinical_document(
     await db.flush()
     await db.refresh(pa_request)
     
-    # 4. Queue background OCR task (The "Non-blocking" Professional way)
+    # 4. Queue background OCR task (non-blocking)
     process_ocr.delay(file_path, file.filename)
     
     return {
@@ -102,9 +89,7 @@ async def list_pa_requests(
     page: Pagination,
     status_filter: Optional[PARequestStatus] = Query(None, alias="status")
 ):
-    """
-    Retrieve clinical PA requests filtered by facility isolation.
-    """
+    """Retrieve clinical PA requests filtered by facility isolation."""
     logger.debug(f"User {user.email} listing PA requests (filter: {status_filter})")
     
     query = (
@@ -133,11 +118,7 @@ async def create_pa_request(
     hospital_ctx: HospitalCtx,
     user: CurrentUser
 ):
-    """
-    Initialize a new Prior Authorization submission.
-    
-    VALIDATION: Ensures the associated patient belongs to the same clinical facility.
-    """
+    """Initialize a new Prior Authorization submission (patient must belong to the same facility)."""
     logger.info(f"User {user.email} initiating PA for patient ID: {pa_request_in.patient_id}")
     
     # Cross-tenant integrity check
@@ -176,9 +157,7 @@ async def get_pa_request(
     hospital_ctx: HospitalCtx,
     user: CurrentUser
 ):
-    """
-    Retrieve request details by clinical identifier.
-    """
+    """Retrieve request details by clinical identifier."""
     result = await db.execute(
         select(PARequest, Patient)
         .join(Patient, PARequest.patient_id == Patient.id)
@@ -204,12 +183,7 @@ async def update_pa_status(
     hospital_ctx: HospitalCtx,
     user: CurrentUser
 ):
-    """
-    Advance clinical workflow status via FSM transition.
-    
-    Validates state transitions according to FSM rules.
-    Returns error with allowed transitions if invalid.
-    """
+    """Advance clinical workflow status via a validated FSM transition."""
     logger.info(f"User {user.email} transitioning PA {pa_request_id} to {status_update.status}")
     
     result = await db.execute(

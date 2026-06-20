@@ -1,8 +1,3 @@
-"""
-User Model
-Staff members belonging to a hospital. hospital_id enforces isolation.
-"""
-
 from uuid import uuid4
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
@@ -31,12 +26,7 @@ class UserRole(str, PyEnum):
 
 
 class User(Base):
-    """
-    User Model with mandatory hospital_id
-    
-    CONSTRAINT: Every user MUST belong to a hospital.
-    This ensures Hospital A can NEVER access Hospital B's users.
-    """
+    """User with mandatory hospital_id enforcing per-tenant isolation."""
     
     __tablename__ = "users"
     
@@ -46,12 +36,12 @@ class User(Base):
         default=uuid4
     )
     
-    # MANDATORY: Foreign key to hospital (isolation boundary)
+    # Foreign key to hospital (isolation boundary)
     hospital_id: Mapped[UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("hospitals.id", ondelete="CASCADE"),
         nullable=False,
-        index=True  # Index for fast filtering
+        index=True
     )
     
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)

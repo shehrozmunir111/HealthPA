@@ -1,13 +1,3 @@
-"""Provider-agnostic factories for the grounded-coding AI layer.
-
-The engine is configurable via ``.env``. Because LM Studio exposes an
-OpenAI-compatible API, the default ``openai`` provider drives a local LM Studio
-server simply by pointing ``LLM_BASE_URL`` at it (e.g. http://localhost:1234/v1).
-Cloud Groq / Anthropic are selectable via ``CHAT_LLM_PROVIDER``. All third-party
-imports are lazy so an unused provider's package never has to be installed, and
-the offline ``HashingEmbeddings`` keeps tests network-free.
-"""
-
 import hashlib
 import logging
 import math
@@ -22,12 +12,7 @@ logger = logging.getLogger("healthpa.ai.provider")
 
 
 def get_chat_model(streaming: bool = False, temperature: Optional[float] = None):
-    """Return an LCEL-compatible chat model selected by ``CHAT_LLM_PROVIDER``.
-
-    Defaults to an OpenAI-compatible client, which also drives LM Studio when
-    ``LLM_BASE_URL`` is set. Raises on misconfiguration; callers that need a
-    backstop should use :func:`get_chat_model_safe`.
-    """
+    """Return an LCEL-compatible chat model selected by ``CHAT_LLM_PROVIDER`` (raises on misconfig)."""
     provider = (settings.CHAT_LLM_PROVIDER or "openai").lower()
     temp = settings.CHAT_LLM_TEMPERATURE if temperature is None else temperature
 
@@ -88,11 +73,7 @@ def get_chat_model(streaming: bool = False, temperature: Optional[float] = None)
 
 
 def get_chat_model_safe(streaming: bool = False, temperature: Optional[float] = None):
-    """Return a chat model, or ``None`` if AI is disabled / the provider fails.
-
-    Every AI step is expected to degrade gracefully to the rule-based path when
-    this returns ``None`` — the flow must never block on an unreachable LLM.
-    """
+    """Return a chat model, or ``None`` if AI is disabled / the provider fails (callers degrade gracefully)."""
     if not settings.AI_ENABLED:
         return None
     try:
@@ -103,13 +84,7 @@ def get_chat_model_safe(streaming: bool = False, temperature: Optional[float] = 
 
 
 def get_embeddings() -> Embeddings:
-    """Return an embeddings model for retrieval.
-
-    ``EMBEDDING_PROVIDER=local`` returns a dependency-free, offline embedding
-    (used by tests / no-network fallback). Otherwise an OpenAI-compatible
-    embeddings client is returned, which serves LM Studio's nomic model when
-    ``EMBEDDING_BASE_URL``/``LLM_BASE_URL`` points at it.
-    """
+    """Return an embeddings model for retrieval (``EMBEDDING_PROVIDER=local`` for the offline fallback)."""
     provider = (settings.EMBEDDING_PROVIDER or "openai").lower()
 
     if provider == "local":
@@ -127,13 +102,7 @@ def get_embeddings() -> Embeddings:
 
 
 class HashingEmbeddings(Embeddings):
-    """Deterministic, dependency-free bag-of-words hashing embedding.
-
-    Offline and reproducible, so tests need no network and no model download.
-    It captures keyword overlap well enough for a small curated policy corpus;
-    it is intentionally not a semantic model. Production uses real embeddings
-    (nomic via LM Studio, or a cloud provider).
-    """
+    """Deterministic, dependency-free bag-of-words hashing embedding for offline/test use."""
 
     def __init__(self, dim: int = 768):
         self.dim = dim

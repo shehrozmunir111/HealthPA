@@ -1,8 +1,3 @@
-"""
-Patient Model
-HIPAA-protected patient data with hospital isolation.
-"""
-
 from uuid import uuid4
 from datetime import datetime, date
 from typing import TYPE_CHECKING, List, Optional
@@ -22,12 +17,7 @@ if TYPE_CHECKING:
 
 
 class Patient(Base):
-    """
-    Patient Model with mandatory hospital_id
-    
-    CONSTRAINT: Every patient record is isolated to one hospital.
-    No cross-hospital patient data access is possible.
-    """
+    """Patient model isolated to a single hospital (no cross-hospital access)."""
     
     __tablename__ = "patients"
     

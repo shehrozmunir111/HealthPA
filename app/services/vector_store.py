@@ -1,13 +1,3 @@
-"""Vector-store abstraction with hard tenant isolation.
-
-Production uses **Pinecone**; tests/offline use an in-process
-``InMemoryVectorStore`` (langchain-core, no network). Every store is scoped to
-a ``namespace`` — the policy corpus uses ``namespace == str(hospital_id)`` and
-long-term memory uses ``"ltm-{hospital_id}"`` — so a query in one hospital can
-never see another's vectors. The backend is selected by
-``settings.RAG_VECTOR_BACKEND`` ("pinecone" | "memory").
-"""
-
 import logging
 import threading
 from typing import Optional
@@ -20,8 +10,7 @@ from app.services.llm_provider import get_embeddings
 
 logger = logging.getLogger("healthpa.ai.vectorstore")
 
-# Per-namespace in-memory stores (test/offline backend). Module-level so the
-# same namespace returns the same store within a process — isolation holds.
+# Per-namespace in-memory stores (test/offline backend); module-level so a namespace maps to one store per process.
 _memory_stores: dict[str, InMemoryVectorStore] = {}
 _lock = threading.Lock()
 _pinecone_index_ready = False
@@ -70,8 +59,7 @@ def _ensure_pinecone_index(dim: int) -> None:
                     region=settings.PINECONE_REGION,
                 ),
             )
-            # A freshly created serverless index isn't immediately queryable;
-            # wait until it reports ready before the first upsert.
+            # Wait until the freshly created serverless index reports ready before the first upsert.
             import time
 
             for _ in range(60):
@@ -88,11 +76,7 @@ def get_vector_store(
     namespace: str,
     embeddings: Optional[Embeddings] = None,
 ) -> VectorStore:
-    """Return a tenant-scoped vector store for ``namespace``.
-
-    Pass an explicit ``embeddings`` to keep documents and queries on the same
-    embedding (important for the deterministic test backend).
-    """
+    """Return a tenant-scoped vector store for ``namespace``."""
     embeddings = embeddings or get_embeddings()
     backend = (settings.RAG_VECTOR_BACKEND or "pinecone").lower()
 
@@ -111,11 +95,7 @@ def get_vector_store(
 
 
 def clear_namespace(namespace: str, embeddings: Optional[Embeddings] = None) -> None:
-    """Remove all vectors in ``namespace`` (used to rebuild a hospital's corpus).
-
-    Upsert-by-id handles added/changed chunks; clearing first also drops chunks
-    that were removed from the corpus since the last index.
-    """
+    """Remove all vectors in ``namespace`` (used to rebuild a hospital's corpus)."""
     backend = (settings.RAG_VECTOR_BACKEND or "pinecone").lower()
     if backend == "memory":
         with _lock:

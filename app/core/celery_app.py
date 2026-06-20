@@ -1,7 +1,3 @@
-"""
-Celery Configuration for Background Tasks
-"""
-
 from celery import Celery
 from celery.schedules import crontab
 

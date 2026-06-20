@@ -1,14 +1,3 @@
-"""Multi-agent supervisor: routes a coder request to the right path.
-
-Routes to one of:
-- ``extract``  — run grounded extraction over a PA note (the HITL graph)
-- ``review``   — act on a pending review (approve/reject/edit)
-- ``qa``       — answer a policy/coding question (the ReAct/RAG agent)
-
-LLM-first classification (structured output) with a deterministic keyword
-fallback so routing always works offline.
-"""
-
 import logging
 import re
 

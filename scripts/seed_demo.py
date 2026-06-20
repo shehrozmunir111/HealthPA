@@ -1,18 +1,3 @@
-"""Seed a self-contained, fully working demo into the app database.
-
-Creates a demo hospital, a login user, patients, and PA cases whose clinical
-notes match the sample policies — then ingests those policies into the demo
-hospital's vector namespace. After running, log in and click "Run extraction"
-on any case to see real LLM-grounded codes.
-
-    python -m scripts.seed_demo            # create (idempotent)
-
-Login:  demo@healthpa.local  /  demo12345
-
-Prereqs: the app database in DATABASE_URL is reachable, LM Studio is running
-(for nomic embeddings during ingestion), and Pinecone is reachable.
-"""
-
 import asyncio
 import os
 import sys

@@ -1,8 +1,3 @@
-"""
-Hospital Model
-Top-level tenant entity. All other data belongs to a hospital.
-"""
-
 from uuid import uuid4
 from datetime import datetime
 from typing import TYPE_CHECKING, List
@@ -22,12 +17,7 @@ if TYPE_CHECKING:
 
 
 class Hospital(Base):
-    """
-    Hospital/Tenant Model
-    
-    This is the root of our multi-tenancy hierarchy.
-    Every piece of data belongs to exactly one hospital.
-    """
+    """Hospital/tenant; root of the multi-tenancy hierarchy."""
     
     __tablename__ = "hospitals"
     

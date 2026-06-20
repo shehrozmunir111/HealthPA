@@ -1,7 +1,3 @@
-"""
-Patient Pydantic Schemas
-"""
-
 from datetime import date, datetime
 from typing import Optional
 from uuid import UUID

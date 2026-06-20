@@ -1,12 +1,3 @@
-"""Per-coder / per-hospital long-term semantic memory.
-
-Persists memorable facts (e.g. a coder's recurring corrections/preferences) in
-the tenant's memory namespace so the system can recall them across PA cases and
-sessions. Hard tenant isolation is via ``namespace == "ltm-{hospital_id}"``;
-recall is further scoped to a ``user_id`` via a metadata post-filter (kept
-backend-agnostic so the in-memory test backend works the same as Pinecone).
-"""
-
 import logging
 import uuid
 from typing import List, Optional
@@ -50,8 +41,7 @@ class LongTermMemory:
     ) -> List[str]:
         if not settings.LONG_TERM_MEMORY:
             return []
-        # Over-fetch generously before the per-coder post-filter so a busy
-        # shared hospital namespace doesn't crowd out this coder's memories.
+        # Over-fetch before the per-coder post-filter so a busy namespace doesn't crowd out this coder's memories.
         try:
             docs = self._store(hospital_id, embeddings).similarity_search(
                 query, k=max(k * 10, 25)

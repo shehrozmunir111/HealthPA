@@ -1,8 +1,3 @@
-"""
-Analytics Endpoints for HealthPA
-Provides reporting and metrics for PA requests
-"""
-
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
@@ -28,11 +23,7 @@ async def get_pa_summary(
     user: CurrentUser,
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze")
 ):
-    """
-    Get PA request summary statistics for the hospital.
-    
-    Returns counts by status and approval metrics.
-    """
+    """Get PA request summary statistics (status counts and approval metrics) for the hospital."""
     start_date = datetime.utcnow() - timedelta(days=days)
     
     base_query = select(PARequest).where(
@@ -69,11 +60,7 @@ async def get_processing_time_stats(
     user: CurrentUser,
     days: int = Query(30, ge=1, le=365)
 ):
-    """
-    Get average processing time statistics.
-    
-    Measures time from creation to final decision.
-    """
+    """Get average processing time (creation to final decision) statistics."""
     start_date = datetime.utcnow() - timedelta(days=days)
     
     query = select(PARequest).where(
@@ -116,9 +103,7 @@ async def get_payer_breakdown(
     user: CurrentUser,
     days: int = Query(30, ge=1, le=365)
 ):
-    """
-    Get approval rates broken down by insurance payer.
-    """
+    """Get approval rates broken down by insurance payer."""
     start_date = datetime.utcnow() - timedelta(days=days)
     
     query = select(PARequest).where(
@@ -167,11 +152,7 @@ async def get_trends(
     user: CurrentUser,
     days: int = Query(30, ge=7, le=365)
 ):
-    """
-    Get daily trends for PA requests.
-    
-    Returns daily counts and approval rates.
-    """
+    """Get daily trends (counts and approval rates) for PA requests."""
     start_date = datetime.utcnow() - timedelta(days=days)
     
     query = select(PARequest).where(
@@ -219,9 +200,7 @@ async def get_patient_stats(
     db: DbSession,
     user: CurrentUser
 ):
-    """
-    Get patient statistics for the hospital.
-    """
+    """Get patient statistics for the hospital."""
     query = select(func.count(Patient.id)).where(
         Patient.hospital_id == hospital_ctx.hospital_id
     )

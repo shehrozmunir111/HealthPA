@@ -1,8 +1,3 @@
-"""
-Appointment Model
-Patient appointments scoped per hospital (multi-tenant).
-"""
-
 from uuid import uuid4
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
@@ -28,10 +23,7 @@ class AppointmentStatus(str, PyEnum):
 
 
 class Appointment(Base):
-    """
-    Appointment Model with mandatory hospital_id for tenant isolation.
-    reminder_sent prevents duplicate 24-hour reminder emails.
-    """
+    """Appointment with mandatory hospital_id for tenant isolation."""
 
     __tablename__ = "appointments"
 

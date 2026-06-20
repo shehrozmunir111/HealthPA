@@ -1,12 +1,3 @@
-"""Reranking for retrieved policy chunks.
-
-Default is a deterministic, offline **lexical** reranker (length-normalized term
-frequency) so retrieval quality improves without any network call and tests stay
-reproducible. An optional **LLM** reranker (structured 0-1 relevance scoring) is
-used when ``RAG_RERANK_LLM`` is on and a chat model is supplied; it degrades
-gracefully to the lexical order on any failure.
-"""
-
 import logging
 import re
 from collections import Counter
@@ -78,11 +69,7 @@ def rerank(
     top_n: int,
     llm=None,
 ) -> List[Document]:
-    """Rerank ``docs`` for ``query`` down to ``top_n``.
-
-    Uses the LLM reranker only when explicitly enabled and an ``llm`` is given;
-    otherwise the deterministic lexical reranker.
-    """
+    """Rerank ``docs`` for ``query`` down to ``top_n`` (LLM if enabled, else lexical)."""
     if not docs:
         return []
     if llm is not None and settings.RAG_RERANK_LLM:

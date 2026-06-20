@@ -1,8 +1,3 @@
-"""
-Audit Log Model
-HIPAA-compliant audit trail with JSONB and GIN indexing.
-"""
-
 from uuid import uuid4
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional, List
@@ -38,13 +33,7 @@ class AuditAction(str, PyEnum):
 
 
 class AuditLog(Base):
-    """
-    HIPAA Audit Log Model
-    
-    Records every significant action for compliance.
-    Uses JSONB for flexible metadata storage.
-    GIN index enables fast querying of JSONB fields.
-    """
+    """HIPAA audit log recording significant actions, with JSONB metadata."""
     
     __tablename__ = "audit_logs"
     

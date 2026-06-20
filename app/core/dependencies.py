@@ -1,8 +1,3 @@
-"""
-Core Dependencies
-Global dependencies for the FastAPI application.
-"""
-
 from typing import Annotated
 from uuid import UUID
 
@@ -39,12 +34,7 @@ HospitalCtx = Annotated[HospitalContext, Depends(get_hospital_context)]
 # --- Role-Based Access Control (RBAC) ---
 
 class RoleChecker:
-    """
-    Dependency that enforces specific user roles for an endpoint.
-    
-    Usage:
-        @router.post("/", dependencies=[Depends(RoleChecker([UserRole.ADMIN]))])
-    """
+    """Dependency that enforces specific user roles for an endpoint."""
     def __init__(self, allowed_roles: list):
         self.allowed_roles = allowed_roles
 

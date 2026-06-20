@@ -1,8 +1,3 @@
-"""
-Appointment Endpoints — hospital-scoped CRUD.
-All queries are isolated to the caller's hospital_id via HospitalContext.
-"""
-
 from typing import Annotated, List, Optional
 from uuid import UUID
 

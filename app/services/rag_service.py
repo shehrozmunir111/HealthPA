@@ -1,19 +1,3 @@
-"""Production RAG over per-hospital payer/coding-policy corpora.
-
-Pipeline: load (PDF/txt) -> chunk (RecursiveCharacterTextSplitter) -> embed ->
-upsert into the tenant's vector-store namespace. Ingestion is **idempotent**
-(stable per-chunk ids -> upsert, no duplicates) and **fingerprint-cached**
-(a per-hospital signature skips re-embedding when the corpus hasn't changed).
-Retrieval is hard-scoped to ``namespace == hospital_id`` and supports
-``payer``/``code_system`` metadata filters, with reranking down to top-k.
-
-Adaptive/Corrective RAG helpers (``grade`` / ``rewrite_query``) live here and
-are consumed by the extraction graph in Phase 3.
-
-Everything is synchronous (matching the LangChain/LangGraph patterns); async
-callers should invoke via ``fastapi.concurrency.run_in_threadpool``.
-"""
-
 import hashlib
 import json
 import logging
@@ -75,11 +59,7 @@ def build_documents(
     payer: Optional[str] = None,
     code_system: Optional[str] = None,
 ) -> Tuple[List[Document], List[str]]:
-    """Chunk ``text`` into (documents, stable_ids) carrying tenant metadata.
-
-    The id is ``"{source_doc}::{chunk_index}"`` — stable across re-ingestion of
-    the same document, so re-running ingestion upserts in place (no duplicates).
-    """
+    """Chunk ``text`` into (documents, stable_ids) carrying tenant metadata; ids are stable for in-place upsert."""
     chunks = [chunk for chunk in _splitter().split_text(text or "") if chunk.strip()]
     docs: List[Document] = []
     ids: List[str] = []
@@ -146,13 +126,7 @@ class RAGService:
         force: bool = False,
         embeddings=None,
     ) -> dict:
-        """Rebuild a hospital's **entire** policy corpus from ``docs``.
-
-        ``docs``/``ids`` must be the full corpus for the hospital. Skips when the
-        corpus signature is unchanged (fingerprint cache). On change it clears
-        the namespace first (so removed chunks don't linger) and re-adds with
-        stable ids. Returns ``{"status": "cached"|"rebuilt", "documents": n}``.
-        """
+        """Rebuild a hospital's entire policy corpus from ``docs``; skips via fingerprint cache when unchanged."""
         embeddings = embeddings or get_embeddings()
         ns = policy_namespace(hospital_id)
         signature = _signature(ids, docs)
@@ -176,12 +150,7 @@ class RAGService:
         force: bool = False,
         embeddings=None,
     ) -> dict:
-        """Load + chunk multiple policy files and reindex them as one corpus.
-
-        ``items``: list of ``{"path", "source_doc"?, "payer"?, "code_system"?}``.
-        All files are aggregated into a single corpus before reindexing, so they
-        coexist in the hospital's namespace.
-        """
+        """Load + chunk multiple policy files (``{"path", "source_doc"?, "payer"?, "code_system"?}``) and reindex as one corpus."""
         all_docs: List[Document] = []
         all_ids: List[str] = []
         for item in items:
@@ -208,19 +177,13 @@ class RAGService:
         llm=None,
         embeddings=None,
     ) -> List[Document]:
-        """Retrieve top-k policy chunks for a hospital, filtered + reranked.
-
-        Tenant isolation is enforced by the namespace; ``payer``/``code_system``
-        are applied as a backend-agnostic post-filter before reranking.
-        """
+        """Retrieve top-k policy chunks for a hospital, filtered + reranked."""
         embeddings = embeddings or get_embeddings()
         k = k or settings.RAG_TOP_K
         ns = policy_namespace(hospital_id)
         store = get_vector_store(ns, embeddings)
 
-        # Widen the candidate pool when a metadata filter is applied, so the
-        # backend-agnostic post-filter doesn't starve when payer/code_system
-        # chunks rank just below the default cutoff.
+        # Widen the candidate pool when a metadata filter is applied so the post-filter doesn't starve.
         fetch_k = max(k, settings.RAG_FETCH_K)
         if payer or code_system:
             fetch_k = max(fetch_k, settings.RAG_FETCH_K * 5)
@@ -234,9 +197,7 @@ class RAGService:
             return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
 
         def _match(doc: Document) -> bool:
-            # Normalized comparison ("United Healthcare" == "UnitedHealthcare"),
-            # and an untagged policy doc is treated as applying to any payer /
-            # code system rather than being filtered out.
+            # Normalized comparison; an untagged doc applies to any payer/code system.
             doc_payer = doc.metadata.get("payer")
             if payer and doc_payer and _norm(doc_payer) != _norm(payer):
                 return False
@@ -255,11 +216,7 @@ class RAGService:
     # -- Adaptive / Corrective RAG -----------------------------------------
 
     def grade(self, query: str, docs: List[Document], llm=None) -> bool:
-        """Return True if the retrieved policy is relevant + sufficient.
-
-        Falls back to "relevant when any docs exist" if the LLM is unavailable,
-        so the flow never blocks.
-        """
+        """Return True if the retrieved policy is relevant + sufficient (falls back to docs-exist when no LLM)."""
         if not docs:
             return False
         if llm is None:

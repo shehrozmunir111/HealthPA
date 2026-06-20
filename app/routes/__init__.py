@@ -1,12 +1,3 @@
-"""
-HealthPA API Router
-
-Versioning Strategy:
-    - All endpoints under /api/
-    - New features added to existing version
-    - Breaking changes will require new version prefix
-"""
-
 from fastapi import APIRouter
 
 from app.routes import (

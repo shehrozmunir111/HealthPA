@@ -1,14 +1,3 @@
-"""Ingest payer/coding-policy documents into a hospital's persistent index.
-
-Usage (from project root, with .env configured for Pinecone + embeddings):
-
-    python -m scripts.ingest_policies --hospital <HOSPITAL_UUID> \
-        --dir data/policies/<HOSPITAL_UUID> [--payer Aetna] [--code-system ICD10] [--force]
-
-Reads every file in --dir, chunks + embeds them, and upserts into the tenant's
-vector-store namespace (idempotent; fingerprint-cached unless --force).
-"""
-
 import argparse
 import os
 import sys

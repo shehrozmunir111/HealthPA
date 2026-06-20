@@ -1,14 +1,3 @@
-"""Grounded clinical-code extraction.
-
-Extracts ICD-10 / CPT codes from a clinical note **grounded** in retrieved +
-reranked payer/coding policy, returning structured ``ProposedCodes`` with
-citations. Strict mode (LLM + policy available) emits only codes whose code
-string is present in the cited policy context — "no code without policy
-evidence". When the LLM/policy is unavailable it degrades to a deterministic
-regex backstop (``fallback_used=True``) so the flow never blocks; those codes
-are flagged ungrounded for the human reviewer.
-"""
-
 import logging
 import re
 from typing import List, Optional
@@ -35,8 +24,7 @@ def format_context(docs: List[Document]) -> str:
 
 
 def _attach_citations(codes: List[ProposedCode], docs: List[Document]) -> None:
-    """For codes lacking citations, attach one for any policy chunk that
-    literally contains the code string (auto-grounding)."""
+    """Attach an auto-citation for any policy chunk literally containing the code."""
     for code in codes:
         if code.citations:
             continue
@@ -57,8 +45,7 @@ def rule_based_extract(clinical_notes: str, *, reason: str = "") -> ProposedCode
     """Deterministic regex backstop. Ungrounded, low-confidence, for review."""
     text = clinical_notes or ""
     cpt_hits = set(_CPT_RE.findall(text))
-    # ICD-10 codes carry a leading letter; CPT are bare 5-digit — the patterns
-    # don't overlap, so the two scans can't double-count the same token.
+    # ICD-10 carry a leading letter, CPT are bare 5-digit, so scans can't double-count.
     icd_hits = _ICD10_RE.findall(text)
     codes: List[ProposedCode] = []
     for code in dict.fromkeys(icd_hits):
@@ -79,12 +66,7 @@ def extract_codes(
     docs: List[Document],
     llm=None,
 ) -> ProposedCodes:
-    """Grounded extraction. Returns ``ProposedCodes`` with citations.
-
-    - No LLM or no policy -> rule-based backstop.
-    - LLM path -> structured extraction, auto-citation, then grounding filter
-      (ungrounded codes are dropped in strict mode).
-    """
+    """Grounded extraction returning ``ProposedCodes`` with citations (rule-based backstop if no LLM/policy)."""
     if llm is None or not docs:
         return rule_based_extract(
             clinical_notes,

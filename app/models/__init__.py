@@ -1,8 +1,3 @@
-"""
-Models Package
-All models inherit from Base and include hospital_id for multi-tenancy.
-"""
-
 from app.models.hospital import Hospital
 from app.models.user import User, UserRole
 from app.models.patient import Patient

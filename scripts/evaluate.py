@@ -1,18 +1,3 @@
-"""Evaluate grounded coding over the labelled dataset (app/eval/cases.json).
-
-Metrics: code-extraction precision/recall/F1 (vs gold), retrieval recall@k, and
-(optional) LLM-as-judge citation faithfulness.
-
-Self-contained + offline by default: forces the in-memory vector backend and
-hashing embeddings so it runs with no Pinecone/LM Studio. Extraction uses the
-chat model from .env when reachable, else the deterministic rule-based backstop.
-
-Usage (from project root):
-    python -m scripts.evaluate            # offline, no judge
-    python -m scripts.evaluate --judge    # add LLM-as-judge (needs a chat model)
-    python -m scripts.evaluate --use-llm  # use the configured chat model for extraction
-"""
-
 import argparse
 import json
 import os
