@@ -1,78 +1,71 @@
 # HealthPA
 
-> Multi-tenant healthcare prior-authorization SaaS with **grounded, human-reviewed AI medical coding**.
+> A healthcare prior authorization platform with grounded, human reviewed AI medical coding.
 
-HealthPA turns clinical notes into **policy-grounded ICD-10 / CPT codes** that a human approves before they're final. The AI proposes codes *only* from retrieved payer policy, cites the exact passage, and pauses for human sign-off — no code is emitted without evidence.
+HealthPA turns clinical notes into policy grounded ICD 10 and CPT codes that a human approves before they are final. The AI proposes codes only from retrieved payer policy, cites the exact passage, and pauses for human signoff. No code is emitted without evidence.
 
-![HealthPA — grounded code review](assets/extraction-review.png)
+## Live demo
 
----
+| App | Link | Login |
+|---|---|---|
+| HealthPA | https://healthpa.3-230-42-191.sslip.io | `demo@healthpa.local` / `demo12345` |
 
-## Features
+Open a case, click **Run extraction**, review the proposed codes, then approve, reject, or edit.
 
-- **Grounded coding (RAG)** — codes are extracted from retrieved payer/coding policy with citations; ungrounded suggestions are dropped.
-- **Human-in-the-loop** — LangGraph `interrupt`/resume review: **approve · reject · edit**, durable across restarts (Postgres checkpointer); approval advances the case status.
-- **Multi-agent** — supervisor routing + a ReAct policy-QA assistant (optional Tavily web search).
-- **Multi-tenant & secure** — strict `hospital_id` isolation, JWT/RBAC, HIPAA-style audit trail.
-- **PA workflow** — finite-state machine, OCR uploads, batch import, analytics, AWS SES email.
-- **Evaluation** — RAGAS (faithfulness, context precision/recall) + deterministic precision/recall/F1.
-- **Tested** — 138 passing tests (PostgreSQL-backed; the AI layer runs fully offline in tests).
+![HealthPA grounded code review](assets/extraction-review.png)
 
----
+## What it does
+
+- **Grounded coding (RAG).** Codes come from retrieved payer policy with citations. Ungrounded guesses are dropped.
+- **Human in the loop.** A LangGraph review step lets a coder approve, reject, or edit. Approve and reject both move the case status.
+- **Multi agent.** A supervisor routes work and a policy question assistant answers from the same policy (optional web search).
+- **Multi tenant and secure.** Strict hospital isolation, JWT and role based access, and a HIPAA style audit trail.
+- **Full PA workflow.** A state machine, OCR uploads, batch import, analytics, and email through AWS SES.
+- **Evaluation.** RAGAS scores plus deterministic precision, recall, and F1.
+- **Tested.** 138 passing tests; the AI layer runs fully offline in tests.
 
 ## Tech stack
 
-FastAPI · async SQLAlchemy 2 · PostgreSQL 15 · Celery + Redis · **LangGraph + LangChain** · **Pinecone** · LM Studio / Groq / OpenAI (provider-agnostic) · **RAGAS** · React + Vite + Tailwind · Docker
+FastAPI, async SQLAlchemy 2, PostgreSQL, Celery and Redis, LangGraph and LangChain, Pinecone, Groq or OpenAI or local LM Studio (provider agnostic), RAGAS, React with Vite and Tailwind, Docker.
 
----
+## Run it locally
 
-## Quickstart
-
-**Backend**
+Backend:
 ```bash
 pip install -r requirements.txt
-cp .env.example .env            # configure DB + AI provider
-python manage_db.py init        # create schema + tables
+cp .env.example .env            # set the database and the AI provider
+python init_db.py               # create the tables
 uvicorn app.main:app --reload   # http://localhost:8000  (/docs for Swagger)
 ```
 
-**Frontend**
+Frontend:
 ```bash
 cd frontend
 npm install
 npm run dev                     # http://localhost:5173
 ```
 
-**Demo data (optional, recommended)**
+Demo data:
 ```bash
-python -m scripts.seed_demo     # demo hospital + cases + ingested policy
-# log in:  demo@healthpa.local  /  demo12345
+python -m scripts.seed_demo     # demo hospital, cases, and ingested policy
+# login:  demo@healthpa.local  /  demo12345
 ```
 
-> The AI layer needs a chat model + embeddings (local **LM Studio** by default, or Groq/OpenAI via env) and **Pinecone** for vectors. Without them the flow degrades gracefully to a rule-based fallback. See `.env.example` for all settings.
+> The AI layer needs a chat model and embeddings (Groq or OpenAI, or local LM Studio) plus Pinecone for vectors. Without them the flow falls back to a simple rule based path. See `.env.example` for every setting.
 
----
-
-## AI endpoints (JWT + hospital-scoped)
+## Main AI endpoints (JWT and hospital scoped)
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/v1/pa/{id}/extract` | RAG + grounded extraction; pauses for review |
-| `GET`  | `/api/v1/pa/{id}/proposed-codes` | Proposed codes + citations |
-| `POST` | `/api/v1/pa/{id}/review` | `{decision: approve\|reject\|edit}` → finalize |
-| `POST` | `/api/v1/pa/{id}/ask` | Policy Q&A (ReAct / RAG) |
-| `POST` | `/api/v1/policies/reindex` | Rebuild the hospital's policy index |
+| `POST` | `/api/v1/pa/{id}/extract` | RAG plus grounded extraction; pauses for review |
+| `GET`  | `/api/v1/pa/{id}/proposed-codes` | Proposed codes with citations |
+| `POST` | `/api/v1/pa/{id}/review` | `{decision: approve, reject, edit}` finalizes the case |
+| `POST` | `/api/v1/pa/{id}/ask` | Policy question and answer |
+| `POST` | `/api/v1/policies/reindex` | Rebuild the hospital policy index |
 
----
+## Deployment
 
-## Screenshots
-
-| | |
-|---|---|
-| ![Cases](assets/cases.png) | ![Extraction](assets/extraction.png) |
-| ![Approved](assets/extraction-approved.png) | ![Policy Q&A](assets/policy-qa.png) |
-
----
+Deployed on AWS with Terraform (one EC2 host, managed RDS, S3, SES, secrets in SSM, free HTTPS via Caddy and Let's Encrypt). The infrastructure code lives in a separate `infra-deploy` repository.
 
 ## Testing
 
@@ -80,10 +73,8 @@ python -m scripts.seed_demo     # demo hospital + cases + ingested policy
 pytest -q          # 138 tests (needs a reachable PostgreSQL)
 ```
 
-Evaluate coding quality: `python -m scripts.evaluate --ragas` (needs a chat model).
-
----
+Evaluate coding quality with `python -m scripts.evaluate --ragas`.
 
 ## License
 
-Proprietary — all rights reserved.
+Proprietary. All rights reserved.
