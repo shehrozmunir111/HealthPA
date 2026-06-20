@@ -1,6 +1,7 @@
-# Serves the built site and proxies /api to the backend. Plain HTTP on :80.
-# For a real domain with automatic HTTPS, change :80 to your domain name.
-:80 {
+# Serves the built site and proxies /api to the backend.
+# The site address is a free sslip.io hostname that resolves to the server IP,
+# so Caddy automatically gets a free Let's Encrypt certificate (HTTPS on 443).
+healthpa.3-230-42-191.sslip.io {
 	encode gzip
 
 	# API traffic goes to the FastAPI container (same origin, no CORS headaches).
