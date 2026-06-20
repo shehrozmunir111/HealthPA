@@ -18,6 +18,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import threading
 from typing import List, Optional, Tuple
 
@@ -229,10 +230,18 @@ class RAGService:
             logger.warning("similarity_search failed for hospital %s", hospital_id)
             return []
 
+        def _norm(value) -> str:
+            return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
+
         def _match(doc: Document) -> bool:
-            if payer and doc.metadata.get("payer") != payer:
+            # Normalized comparison ("United Healthcare" == "UnitedHealthcare"),
+            # and an untagged policy doc is treated as applying to any payer /
+            # code system rather than being filtered out.
+            doc_payer = doc.metadata.get("payer")
+            if payer and doc_payer and _norm(doc_payer) != _norm(payer):
                 return False
-            if code_system and doc.metadata.get("code_system") != code_system:
+            doc_cs = doc.metadata.get("code_system")
+            if code_system and doc_cs and _norm(doc_cs) != _norm(code_system):
                 return False
             return True
 

@@ -1,0 +1,15 @@
+UnitedHealthcare Medical Policy — Diabetes Management & Monitoring
+
+Diagnosis coding (ICD-10-CM):
+- Type 2 diabetes mellitus without complications is E11.9.
+- Type 2 diabetes mellitus with hyperglycemia is E11.65.
+- Type 1 diabetes mellitus without complications is E10.9.
+
+Laboratory and monitoring (CPT):
+- Hemoglobin A1c (glycated hemoglobin) testing is CPT 83036.
+- Glucose, quantitative, blood, is CPT 82947.
+- Comprehensive metabolic panel is CPT 80053.
+
+Authorization criteria: routine HbA1c monitoring (83036) for an established
+diabetes diagnosis is covered without prior authorization, typically up to four
+times per year. Document the diabetes diagnosis and the monitoring plan.

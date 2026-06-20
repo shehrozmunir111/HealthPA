@@ -24,7 +24,7 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.core.dependencies import CurrentUser, DbSession, HospitalCtx
 from app.models.audit_log import AuditAction
-from app.models.pa_request import PARequest
+from app.models.pa_request import FSMTransitionError, PARequest, PARequestStatus
 from app.schemas.codes import AskRequest, ReindexRequest, ReviewDecision
 from app.services.audit_service import AuditService
 from app.services.code_extraction_graph import code_extraction_graph
@@ -57,13 +57,25 @@ async def extract_codes(
     pa_id: UUID, db: DbSession, user: CurrentUser, hospital_ctx: HospitalCtx
 ):
     pa = await _get_pa(db, hospital_ctx, pa_id)
-    result = await run_in_threadpool(
-        code_extraction_graph.start,
-        hospital_id=hospital_ctx.hospital_id,
-        pa_id=pa.id,
-        clinical_notes=pa.clinical_notes or "",
-        payer=pa.payer_name,
-    )
+
+    try:
+        result = await run_in_threadpool(
+            code_extraction_graph.start,
+            hospital_id=hospital_ctx.hospital_id,
+            pa_id=pa.id,
+            clinical_notes=pa.clinical_notes or "",
+            payer=pa.payer_name,
+        )
+    except Exception as exc:
+        logger.warning("AI extraction failed (%s); using rule-based fallback", exc)
+        from app.services.grounded_extractor import rule_based_extract
+        fallback = rule_based_extract(pa.clinical_notes or "")
+        result = {
+            "status": "pending_review",
+            "proposed": fallback.model_dump(),
+            "summary": "Rule-based extraction (AI pipeline unavailable).",
+        }
+
     await AuditService.log_action(
         db=db,
         hospital_id=hospital_ctx.hospital_id,
@@ -115,6 +127,20 @@ async def review_codes(
         pa.procedure_codes = [
             code.get("code") for code in final if code.get("code_system") == "CPT"
         ]
+        # Advance the PA's workflow status so the case leaves the review queue.
+        # Guarded by the FSM — only legal from PENDING; other states keep status.
+        try:
+            pa.transition_to(
+                PARequestStatus.APPROVED,
+                user_id=str(user.id),
+                notes="AI-proposed codes approved by reviewer",
+            )
+        except FSMTransitionError:
+            logger.info(
+                "PA %s in status %s cannot move to APPROVED; codes saved, status kept",
+                pa.id,
+                pa.status,
+            )
     pa.ai_extracted_codes = {
         "final_codes": final,
         "decision": body.decision,
@@ -151,7 +177,12 @@ async def review_codes(
             note=body.reviewer_notes,
         )
 
-    return {"status": result.get("status"), "final_codes": final, "decision": body.decision}
+    return {
+        "status": result.get("status"),
+        "final_codes": final,
+        "decision": body.decision,
+        "pa_status": pa.status.value,
+    }
 
 
 @router.post("/pa/{pa_id}/ask")

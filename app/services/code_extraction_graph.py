@@ -177,6 +177,14 @@ class CodeExtractionGraph:
         llm = llm if llm is not None else get_chat_model_safe()
         graph = self._compile(llm)
         config = {"configurable": {"thread_id": str(pa_id)}}
+        # Each "Run extraction" must be a FRESH run. The checkpointer is keyed by
+        # thread_id == pa_id; without clearing it, re-invoking resumes the prior
+        # (already-reviewed/ended) thread and returns stale/empty state
+        # ("0 of 0 codes"). Drop any existing thread so the graph restarts.
+        try:
+            self._cp().delete_thread(str(pa_id))
+        except Exception:
+            logger.debug("delete_thread unavailable / no prior thread for %s", pa_id)
         result = graph.invoke(
             {
                 "hospital_id": str(hospital_id),

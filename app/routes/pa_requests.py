@@ -16,6 +16,7 @@ from app.core.exceptions import NotFoundException, BadRequestException, Internal
 from app.models.pa_request import PARequest, PARequestStatus, FSMTransitionError, FSMValidator
 from app.models.patient import Patient
 from app.services.webhook_service import webhook_service
+from sqlalchemy.orm import joinedload
 from app.schemas.pa_request import (
     PARequestCreate, 
     PARequestResponse, 
@@ -93,7 +94,7 @@ async def upload_clinical_document(
 # --- Existing Endpoints ---
 
 
-@router.get("/", response_model=List[PARequestResponse])
+@router.get("/")
 async def list_pa_requests(
     db: DbSession,
     hospital_ctx: HospitalCtx,
@@ -106,14 +107,23 @@ async def list_pa_requests(
     """
     logger.debug(f"User {user.email} listing PA requests (filter: {status_filter})")
     
-    query = hospital_ctx.apply_isolation(select(PARequest), PARequest)
+    query = (
+        select(PARequest, Patient)
+        .join(Patient, PARequest.patient_id == Patient.id)
+    )
+    query = hospital_ctx.apply_isolation(query, PARequest)
     
     if status_filter:
         query = query.where(PARequest.status == status_filter)
     
     query = query.offset(page.skip).limit(page.limit)
     result = await db.execute(query)
-    return result.scalars().all()
+    
+    out = []
+    for pa, patient in result.all():
+        data = PARequestResponse.model_validate(pa)
+        out.append({**data.model_dump(), "patient_name": patient.full_name})
+    return out
 
 
 @router.post("/", response_model=PARequestResponse, status_code=status.HTTP_201_CREATED)
@@ -159,7 +169,7 @@ async def create_pa_request(
     return pa_request
 
 
-@router.get("/{pa_request_id}", response_model=PARequestResponse)
+@router.get("/{pa_request_id}")
 async def get_pa_request(
     pa_request_id: UUID,
     db: DbSession,
@@ -170,16 +180,20 @@ async def get_pa_request(
     Retrieve request details by clinical identifier.
     """
     result = await db.execute(
-        select(PARequest).where(PARequest.id == pa_request_id)
+        select(PARequest, Patient)
+        .join(Patient, PARequest.patient_id == Patient.id)
+        .where(PARequest.id == pa_request_id)
     )
-    pa_request = result.scalar_one_or_none()
+    row = result.one_or_none()
     
-    if not pa_request:
+    if not row:
         raise NotFoundException(f"PA Request ID {pa_request_id} not found.")
     
+    pa_request, patient = row
     hospital_ctx.verify_ownership(pa_request)
     
-    return pa_request
+    data = PARequestResponse.model_validate(pa_request)
+    return {**data.model_dump(), "patient_name": patient.full_name}
 
 
 @router.patch("/{pa_request_id}/status", response_model=PARequestResponse)

@@ -14,25 +14,39 @@ from app.core.dependencies import CurrentUser, DbSession, Pagination, RoleChecke
 from app.core.exceptions import NotFoundException, ConflictException
 from app.models.hospital import Hospital
 from app.models.user import UserRole
-from app.schemas.hospital import HospitalCreate, HospitalResponse, HospitalUpdate
+from app.schemas.hospital import (
+    HospitalCreate,
+    HospitalPublic,
+    HospitalResponse,
+    HospitalUpdate,
+)
 
 router = APIRouter()
 admin_required = Depends(RoleChecker([UserRole.ADMIN]))
+
+
+@router.get("/public", response_model=List[HospitalPublic])
+async def list_hospitals_public(db: DbSession, page: Pagination):
+    """
+    Minimal, UNAUTHENTICATED hospital list for the registration page
+    (a new user must pick their hospital before they have a token).
+    Declared before '/{hospital_id}' so the static path wins.
+    """
+    result = await db.execute(
+        select(Hospital).where(Hospital.is_active.is_(True)).offset(page.skip).limit(page.limit)
+    )
+    return result.scalars().all()
 
 
 @router.get("/", response_model=List[HospitalResponse], dependencies=[admin_required])
 async def list_hospitals(
     db: DbSession,
     user: CurrentUser,
-    page: Pagination
+    page: Pagination,
 ):
     """
-    Retrieve a list of all registered hospitals.
-    
-    NOTE: In production environments, this access should be restricted to superusers.
+    Retrieve all registered hospitals. Admin-only (full records).
     """
-    logger.debug(f"User {user.email} listing all hospitals.")
-    
     result = await db.execute(select(Hospital).offset(page.skip).limit(page.limit))
     return result.scalars().all()
 

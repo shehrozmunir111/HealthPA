@@ -35,8 +35,17 @@ class HospitalUpdate(BaseModel):
 class HospitalResponse(HospitalBase):
     """Schema for hospital response."""
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class HospitalPublic(BaseModel):
+    """Minimal hospital info exposed unauthenticated for the registration page."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    code: str

@@ -19,7 +19,7 @@ from app.core.exceptions import (
     NotFoundException,
     UnauthorizedException,
 )
-from app.core.logging import security_logger
+from app.core.logging import logger, security_logger
 from app.core.password import get_password_hash, verify_password
 from app.core.security import create_access_token
 from app.models.user import User
@@ -101,13 +101,16 @@ async def login(
                 await db.commit()
 
                 # Fire fraud alert (non-blocking)
-                from app.tasks.email import send_fraud_alert
-                send_fraud_alert.delay(
-                    user_email=user.email,
-                    failed_attempts=user.failed_login_attempts,
-                    ip_address=ip,
-                    locked_until_iso=locked_until.isoformat(),
-                )
+                try:
+                    from app.tasks.email import send_fraud_alert
+                    send_fraud_alert.delay(
+                        user_email=user.email,
+                        failed_attempts=user.failed_login_attempts,
+                        ip_address=ip,
+                        locked_until_iso=locked_until.isoformat(),
+                    )
+                except Exception:
+                    logger.warning("Failed to queue fraud alert (Celery/Redis unavailable)")
                 security_logger.warning(
                     "Account LOCKED for %s after %d failed attempts",
                     user.email, user.failed_login_attempts,
@@ -177,13 +180,16 @@ async def register(user_in: UserCreate, db: DbSession):
     await db.flush()
     await db.refresh(user)
 
-    # Send verification email (non-blocking)
-    from app.tasks.email import send_verification_email
-    send_verification_email.delay(
-        to_email=user.email,
-        full_name=user.full_name,
-        token=verification_token,
-    )
+    # Send verification email (non-blocking, optional — Redis/Celery may not be running)
+    try:
+        from app.tasks.email import send_verification_email
+        send_verification_email.delay(
+            to_email=user.email,
+            full_name=user.full_name,
+            token=verification_token,
+        )
+    except Exception:
+        logger.warning("Failed to queue verification email (Celery/Redis unavailable)")
 
     security_logger.info("New user registered: %s (hospital %s)", user.email, user.hospital_id)
     return user
@@ -229,12 +235,15 @@ async def resend_verification(body: ForgotPasswordRequest, db: DbSession):
         user.verification_token_expires = datetime.now(timezone.utc) + timedelta(hours=_VERIFICATION_TTL_HOURS)
         await db.commit()
 
-        from app.tasks.email import send_verification_email
-        send_verification_email.delay(
-            to_email=user.email,
-            full_name=user.full_name,
-            token=token,
-        )
+        try:
+            from app.tasks.email import send_verification_email
+            send_verification_email.delay(
+                to_email=user.email,
+                full_name=user.full_name,
+                token=token,
+            )
+        except Exception:
+            logger.warning("Failed to queue verification email (Celery/Redis unavailable)")
 
     return {"message": "If that email exists and is unverified, a new link has been sent."}
 
@@ -253,12 +262,15 @@ async def forgot_password(body: ForgotPasswordRequest, db: DbSession):
         user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=_RESET_TTL_HOURS)
         await db.commit()
 
-        from app.tasks.email import send_password_reset_email
-        send_password_reset_email.delay(
-            to_email=user.email,
-            full_name=user.full_name,
-            token=reset_token,
-        )
+        try:
+            from app.tasks.email import send_password_reset_email
+            send_password_reset_email.delay(
+                to_email=user.email,
+                full_name=user.full_name,
+                token=reset_token,
+            )
+        except Exception:
+            logger.warning("Failed to queue password reset email (Celery/Redis unavailable)")
 
     security_logger.info("Password reset requested for %s", body.email)
     return {"message": "If that email is registered, a password reset link has been sent."}

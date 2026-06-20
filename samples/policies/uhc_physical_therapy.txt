@@ -1,0 +1,20 @@
+UnitedHealthcare Medical Policy — Outpatient Physical Therapy & Low Back Pain
+
+Diagnosis coding (ICD-10-CM):
+- Low back pain, unspecified is M54.50.
+- Vertebrogenic low back pain is M54.51.
+- Other low back pain is M54.59.
+- Lumbago with sciatica, unspecified side, is M54.40.
+
+Physical therapy procedure coding (CPT):
+- Physical therapy evaluation, low complexity, is CPT 97161.
+- Physical therapy evaluation, moderate complexity, is CPT 97162.
+- Physical therapy evaluation, high complexity, is CPT 97163.
+- Therapeutic exercise (each 15 minutes) is CPT 97110.
+- Manual therapy techniques (each 15 minutes) is CPT 97140.
+
+Authorization criteria: outpatient physical therapy for low back pain is covered
+when conservative management is documented and a physical therapy evaluation
+establishes medical necessity. An initial PT evaluation (97161-97163) does not
+require prior authorization; ongoing therapeutic exercise (97110) is covered per
+the established plan of care.

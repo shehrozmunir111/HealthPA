@@ -67,6 +67,7 @@ class PARequestResponse(PARequestBase):
     id: UUID
     hospital_id: UUID
     patient_id: UUID
+    patient_name: Optional[str] = None
     created_by_id: Optional[UUID] = None
     status: PARequestStatus
     status_history: List[dict] = Field(default_factory=list)
