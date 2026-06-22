@@ -7,8 +7,10 @@ export function Login() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [email, setEmail] = useState("demo@healthpa.local");
-  const [password, setPassword] = useState("demo12345");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const DEMO_EMAIL = "demo@healthpa.local";
+  const DEMO_PASSWORD = "demo12345";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const registered = searchParams.get("registered");
@@ -84,6 +86,25 @@ export function Login() {
       {/* Form */}
       <div className="flex items-center justify-center p-6">
         <form onSubmit={onSubmit} className="w-full max-w-sm">
+          {/* Demo credentials box — sits above the "Sign in" heading */}
+          <div className="mb-5 rounded-lg border border-accent/30 bg-accent/5 p-3.5 text-sm">
+            <div className="mb-1.5 font-medium text-accent">Try the demo account</div>
+            <div className="space-y-0.5 font-mono text-xs text-muted">
+              <div>Email: <span className="text-text">{DEMO_EMAIL}</span></div>
+              <div>Password: <span className="text-text">{DEMO_PASSWORD}</span></div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail(DEMO_EMAIL);
+                setPassword(DEMO_PASSWORD);
+              }}
+              className="mt-2 text-xs font-medium text-accent hover:underline"
+            >
+              Fill demo credentials
+            </button>
+          </div>
+
           <h2 className="font-display text-2xl font-bold tracking-tight">
             Sign in
           </h2>
