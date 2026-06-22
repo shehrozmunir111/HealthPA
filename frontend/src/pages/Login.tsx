@@ -86,6 +86,23 @@ export function Login() {
       {/* Form */}
       <div className="flex items-center justify-center p-6">
         <form onSubmit={onSubmit} className="w-full max-w-sm">
+          {/* Compact brand header — only on small screens (the left panel is hidden there) */}
+          <div className="mb-6 lg:hidden">
+            <div className="flex items-center gap-2.5">
+              <span className="grid h-9 w-9 place-items-center rounded-lg bg-accent/15 text-accent">
+                <Activity />
+              </span>
+              <span className="font-display text-lg font-bold tracking-tight">
+                HealthPA
+              </span>
+            </div>
+            <p className="eyebrow mt-4">Grounded medical coding</p>
+            <h1 className="mt-2 font-display text-2xl font-bold leading-tight tracking-tight">
+              Every code earns its place in the&nbsp;
+              <span className="text-accent">policy.</span>
+            </h1>
+          </div>
+
           {/* Demo credentials box — sits above the "Sign in" heading */}
           <div className="mb-5 rounded-lg border border-accent/30 bg-accent/5 p-3.5 text-sm">
             <div className="mb-1.5 font-medium text-accent">Try the demo account</div>
