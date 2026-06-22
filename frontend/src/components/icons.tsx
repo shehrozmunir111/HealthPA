@@ -17,6 +17,13 @@ export const Activity = (p: SVGProps<SVGSVGElement>) => (
     <path d="M3 12h4l2 7 4-16 2 9h6" />
   </svg>
 );
+export const Menu = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M3 6h18" />
+    <path d="M3 12h18" />
+    <path d="M3 18h18" />
+  </svg>
+);
 export const Grid = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <rect x="3" y="3" width="7" height="7" rx="1.5" />
