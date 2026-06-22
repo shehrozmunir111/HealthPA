@@ -102,8 +102,8 @@ export function Layout() {
         onClick={() => setMenuOpen(false)}
       />
       <aside
-        className={`fixed left-0 top-0 z-[60] flex h-full w-72 flex-col border-r border-line bg-surface px-3 py-5 transition-transform duration-300 md:hidden ${
-          menuOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed right-0 top-0 z-[60] flex h-full w-72 flex-col border-l border-line bg-surface px-3 py-5 transition-transform duration-300 md:hidden ${
+          menuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         <div className="flex items-center justify-between">
